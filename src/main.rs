@@ -2,8 +2,6 @@ use bwu_redux_devtools::redux::{Action, ReduxStateChange, create_store};
 use dioxus::prelude::*;
 use route::Route;
 
-use crate::components::daisyui::{TooltipPortal, TooltipPortalCtx};
-
 pub(crate) mod components;
 pub(crate) mod route;
 
@@ -30,10 +28,6 @@ fn App() -> Element {
 
     let _ = store.dispatch(Action::ReduxStateChange(ReduxStateChange::StoreInit));
 
-    let _ = use_context_provider::<Signal<TooltipPortalCtx>>(|| {
-        Signal::new(TooltipPortalCtx::default())
-    });
-
     let dispatch_sender = store.get_dispatch_sender();
     #[cfg(not(target_family = "wasm"))]
     let _devtools_server_future = use_future(move || {
@@ -59,7 +53,6 @@ fn App() -> Element {
         document::Stylesheet { href: DX_COMPONENTS_THEME_CSS }
         document::Stylesheet { href: TAILWIND_CSS }
 
-        TooltipPortal {}
         Router::<Route> {}
     }
 }

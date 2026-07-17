@@ -154,6 +154,13 @@
   .drawer {
     @apply h-screen rounded overflow-hidden drawer-open;
 
+    /* Official (non-portal) tooltips are absolutely positioned inside the
+       sidebar; the menu chain must not clip them. */
+    .drawer-side,
+    .drawer-side .menu {
+      overflow: visible;
+    }
+
     .page-content {
       /* @apply flex h-full w-full items-center p-4 border-b border-base-300 overflow-y-auto; */
     }

@@ -6,9 +6,7 @@
 mod drawer;
 mod kbd;
 mod menu;
-mod tooltip;
 
 pub(crate) use drawer::*;
 pub(crate) use kbd::*;
 pub(crate) use menu::*;
-pub(crate) use tooltip::*;

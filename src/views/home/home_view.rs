@@ -6,12 +6,15 @@ use dioxus_free_icons::{
     Icon,
     icons::ld_icons::{LdAppWindow, LdChevronLeft, LdChevronRight},
 };
+use dioxus_primitives::ContentSide;
 
 use super::HomeViewFacade;
 use crate::{
-    components::daisyui::{
-        Drawer, DrawerMenu, Kbd, KeyboardKey, MenuItemTrigger, MenuTitle, RouteMenuItem, Tooltip,
-        TooltipContent, TooltipPlacement,
+    components::{
+        daisyui::{
+            Drawer, DrawerMenu, Kbd, KeyboardKey, MenuItemTrigger, MenuTitle, RouteMenuItem,
+        },
+        tooltip::{Tooltip, TooltipContent, TooltipTrigger},
     },
     route::Route,
 };
@@ -25,9 +28,6 @@ pub(crate) fn HomeView() -> Element {
     let nav = use_navigator();
 
     let app_names = facade.read().get_app_names();
-
-    let tooltip_placement = TooltipPlacement::Right;
-    let use_portal = true;
 
     let access_keys = HashMap::from([
         (0, "a"),
@@ -59,18 +59,16 @@ pub(crate) fn HomeView() -> Element {
                     r#for: "trigger_id",
                     accesskey: "S",
                     Tooltip {
-                        use_portal,
-                        tooltip_placement,
-                        tooltip_content: rsx! {
-                            TooltipContent { class: "nowrap",
-                                "Open/close sidebar  "
-                                Kbd { "{KeyboardKey::Alt}" }
-                                " + "
-                                Kbd { "S" }
-                            }
-                        },
-                        Icon { class: "icon drawer-close", icon: LdChevronLeft }
-                        Icon { class: "icon drawer-open", icon: LdChevronRight }
+                        TooltipTrigger {
+                            Icon { class: "icon drawer-close", icon: LdChevronLeft }
+                            Icon { class: "icon drawer-open", icon: LdChevronRight }
+                        }
+                        TooltipContent { side: ContentSide::Right, class: "nowrap",
+                            "Open/close sidebar  "
+                            Kbd { "{KeyboardKey::Alt}" }
+                            " + "
+                            Kbd { "S" }
+                        }
                     }
                 }
 
@@ -94,19 +92,17 @@ pub(crate) fn HomeView() -> Element {
                         },
                         div {
                             Tooltip {
-                                use_portal,
-                                tooltip_content: rsx! {
-                                    TooltipContent { class: "nowrap",
-                                        "{app_name}"
-                                        if index <= 9 {
-                                            Kbd { "{KeyboardKey::Alt}" }
-                                            " + "
-                                            Kbd { "{access_keys[&index]}" }
-                                        }
+                                TooltipTrigger {
+                                    Icon { class: "icon", icon: LdAppWindow }
+                                }
+                                TooltipContent { side: ContentSide::Right, class: "nowrap",
+                                    "{app_name}"
+                                    if index <= 9 {
+                                        Kbd { "{KeyboardKey::Alt}" }
+                                        " + "
+                                        Kbd { "{access_keys[&index]}" }
                                     }
-                                },
-                                tooltip_placement,
-                                Icon { class: "icon", icon: LdAppWindow }
+                                }
                             }
 
                             span { class: "menu-text", "{app_name}" }

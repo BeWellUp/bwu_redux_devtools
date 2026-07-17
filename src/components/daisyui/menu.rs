@@ -2,8 +2,6 @@ use std::fmt::Display;
 
 use dioxus::prelude::*;
 
-use super::TooltipPlacement;
-
 #[derive(Props, Clone, Debug, PartialEq)]
 pub(crate) struct MenuProps {
     #[props(optional)]
@@ -96,9 +94,6 @@ pub(crate) struct MenuItemProps {
     is_focused: bool,
     #[props(optional)]
     onclick: EventHandler<Event<MouseData>>,
-    #[props(default = TooltipPlacement::Default)]
-    tooltip_placement: TooltipPlacement,
-    tooltip: Option<String>,
     children: Element,
 }
 
@@ -112,45 +107,11 @@ pub fn MenuItem(props: MenuItemProps) -> Element {
     };
     let active_class = if props.is_active { "menu-active" } else { "" };
     let focused_class = if props.is_active { "menu-focus" } else { "" };
-    let tooltip_class = props.tooltip.clone().map(|_| "tooltip").unwrap_or_default();
     rsx!(
         li {
             class: "menu-item {disabled_class} {title_class}  {props.class}",
             onclick: move |evt| props.onclick.call(evt),
-            a {
-                class: "{active_class} {focused_class} {tooltip_class} {props.tooltip_placement}",
-                "data-tip": props.tooltip,
-                {props.children}
-            }
-        }
-    )
-}
-
-/// Like `MenuItem` just without the `menu-item` class
-#[component]
-pub fn SubMenuItem(props: MenuItemProps) -> Element {
-    let title_class = if props.is_title { "menu-title" } else { "" };
-    let disabled_class = if props.is_enabled {
-        ""
-    } else {
-        "menu-disabled"
-    };
-    let active_class = if props.is_active { "menu-active" } else { "" };
-    let focused_class = if props.is_active { "menu-focus" } else { "" };
-    let tooltip_class = props.tooltip.clone().map(|_| "tooltip").unwrap_or_default();
-    rsx!(
-        li {
-            class: "{disabled_class} {title_class} {props.class}",
-            onclick: move |evt| props.onclick.call(evt),
-            if props.is_title {
-                {props.children}
-            } else {
-                a {
-                    class: "{active_class} {focused_class} {tooltip_class} {props.tooltip_placement}",
-                    "data-tip": props.tooltip,
-                    {props.children}
-                }
-            }
+            a { class: "{active_class} {focused_class}", {props.children} }
         }
     )
 }
