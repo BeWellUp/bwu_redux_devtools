@@ -2,10 +2,14 @@ use std::sync::Arc;
 
 use bwu_redux_devtools::redux::{Action, GlobalCounter, Store, app_id::AppId};
 use dioxus::prelude::*;
+use dioxus_primitives::ContentSide;
 use futures::StreamExt as _;
 
 use super::{ActionListItemFacade, StatesListFacade};
-use crate::components::virtual_list::VirtualList;
+use crate::components::{
+    tooltip::{Tooltip, TooltipContent, TooltipTrigger},
+    virtual_list::VirtualList,
+};
 
 #[component]
 pub(crate) fn StatesList() -> Element {
@@ -96,7 +100,16 @@ pub(crate) fn ActionListItem(props: ActionListItemProps) -> Element {
                             counter: props.item,
                         });
                 },
-                span { class: "action-name", "({state.counter}, {state.session_counter}). {action_name}" }
+                Tooltip {
+                    TooltipTrigger {
+                        span { class: "action-name", "({state.counter}, {state.session_counter}). {action_name}" }
+                    }
+                    TooltipContent { side: ContentSide::Right,
+                        "First: total events seen since the DevTools GUI started."
+                        br {}
+                        "Second: events in this app's current run (resets if the app restarts)."
+                    }
+                }
             }
         }
     } else {

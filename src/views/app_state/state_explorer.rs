@@ -6,6 +6,7 @@ use futures::StreamExt as _;
 use super::StateExplorerFacade;
 use crate::components::{
     daisyui::{CollapseStyle, Menu, MenuItem, MenuSize, SubMenu},
+    icon_tooltip::IconTooltip,
     icons,
 };
 
@@ -92,31 +93,28 @@ pub(crate) fn StateExplorer() -> Element {
             {
                 rsx! {
                     Menu {
-                        // menu_direction: MenuDirection::Vertical,
                         menu_size: MenuSize::XS,
-                        // class: "max-w-xs",
                         MenuItem { is_title: true, "Action" }
                         SubMenu {
                             collapse_style: CollapseStyle::DetailsSummary,
                             title: rsx! {
-                                Icon { class: "icon", icon: icons::Map {} }
+                                IconTooltip { text: "Map or struct",
+                                    Icon { class: "icon", icon: icons::Map {} }
+                                }
                                 "{action_name().unwrap_or_default()}"
                             },
                             StateValueRon { value: action_value }
                         }
                     }
 
-
-                    // h2 { "State" }
                     Menu {
-                        // menu_direction: MenuDirection::Vertical,
                         menu_size: MenuSize::XS,
-                        // class: "max-w-xs",
-                        // MenuItem { is_title: true, "State" }
                         SubMenu {
                             collapse_style: CollapseStyle::DetailsSummary,
                             title: rsx! {
-                                Icon { class: "icon", icon: icons::Map {} }
+                                IconTooltip { text: "Map or struct",
+                                    Icon { class: "icon", icon: icons::Map {} }
+                                }
                                 "State"
                             },
                             StateValueRon { value: state_value }
@@ -156,67 +154,85 @@ pub(crate) fn StateItemValueRon(value: ron::Value) -> Element {
         ron::Value::Bool(v) => {
             if v {
                 rsx! {
-                    Icon { class: "icon", icon: icons::BoolTrue {} }
+                    IconTooltip { text: "true",
+                        Icon { class: "icon", icon: icons::BoolTrue {} }
+                    }
                 }
             } else {
                 rsx! {
-                    Icon { class: "icon", icon: icons::BoolFalse {} }
+                    IconTooltip { text: "false",
+                        Icon { class: "icon", icon: icons::BoolFalse {} }
+                    }
                 }
             }
         }
         ron::Value::Char(c) => rsx! {
-            Icon { class: "icon", icon: icons::Char {} }
+            IconTooltip { text: "Character",
+                Icon { class: "icon", icon: icons::Char {} }
+            }
             "{c}"
         },
         ron::Value::Map(map) => {
             if map.is_empty() {
                 rsx! {
-                    Icon { class: "icon", icon: icons::MapEmpty {} }
+                    IconTooltip { text: "Empty",
+                        Icon { class: "icon", icon: icons::MapEmpty {} }
+                    }
                 }
             } else {
                 rsx! {}
             }
         }
         ron::Value::Number(number) => rsx! {
-            Icon { class: "icon", icon: icons::Number {} }
+            IconTooltip { text: "Number",
+                Icon { class: "icon", icon: icons::Number {} }
+            }
             "{number.into_f64()}"
         },
-        ron::Value::Option(value) => {
-            match value {
-                Some(value) => {
-                    rsx! {
+        ron::Value::Option(value) => match value {
+            Some(value) => {
+                rsx! {
+                    IconTooltip { text: "Optional value (Some)",
                         Icon { class: "icon", icon: icons::Option {} }
-                        // "{value}"
-                        StateItemValueRon { value: value.as_ref().clone() }
                     }
+                    StateItemValueRon { value: value.as_ref().clone() }
                 }
-                None => {
-                    rsx! {
+            }
+            None => {
+                rsx! {
+                    IconTooltip { text: "No value (None)",
                         Icon { class: "icon", icon: icons::OptionNone {} }
                     }
                 }
             }
-        }
+        },
         ron::Value::String(s) => rsx! {
-            Icon { class: "icon", icon: icons::String {} }
+            IconTooltip { text: "String",
+                Icon { class: "icon", icon: icons::String {} }
+            }
             "{s}"
         },
         ron::Value::Bytes(_items) => rsx! {
-            Icon { class: "icon", icon: icons::String {} }
-            // "{items}"
+            IconTooltip { text: "Byte string",
+                Icon { class: "icon", icon: icons::String {} }
+            }
             "Bytes"
         },
         ron::Value::Seq(values) => {
             if values.is_empty() {
                 rsx! {
-                    Icon { class: "icon", icon: icons::MapEmpty {} }
+                    IconTooltip { text: "Empty",
+                        Icon { class: "icon", icon: icons::MapEmpty {} }
+                    }
                 }
             } else {
                 rsx! {}
             }
         }
         ron::Value::Unit => rsx! {
-            Icon { class: "icon", icon: icons::Unit {} }
+            IconTooltip { text: "Unit value ()",
+                Icon { class: "icon", icon: icons::Unit {} }
+            }
         },
     }
 }
@@ -246,7 +262,9 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
                     SubMenu {
                         collapse_style: CollapseStyle::DetailsSummary,
                         title: rsx! {
-                            Icon { class: "icon", icon: icons::Option {} }
+                            IconTooltip { text: "Optional value (Some)",
+                                Icon { class: "icon", icon: icons::Option {} }
+                            }
                         },
                         StateValueRon { value: value.clone() }
                     }
@@ -261,7 +279,9 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
                 if key_direct && value_direct {
                     rsx! {
                         MenuItem {
-                            Icon { class: "icon", icon: icons::MapKey {} }
+                            IconTooltip { text: "Map key",
+                                Icon { class: "icon", icon: icons::MapKey {} }
+                            }
                             span { class: "map-kv-pair",
                                 StateItemValueRon { value: key.clone() }
                                 ":"
@@ -275,9 +295,10 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
                             SubMenu {
                                 collapse_style: CollapseStyle::DetailsSummary,
                                 title: rsx! {
-                                    Icon { class: "icon", icon: icons::MapKey {} }
+                                    IconTooltip { text: "Map key",
+                                        Icon { class: "icon", icon: icons::MapKey {} }
+                                    }
                                     span { class: "map-kv-pair",
-                                        // Icon { class: "icon", icon: icons::MapKey {} }
                                         StateItemValueRon { value: key.clone() }
                                     }
                                 },
@@ -287,8 +308,12 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
                             SubMenu {
                                 collapse_style: CollapseStyle::DetailsSummary,
                                 title: rsx! {
-                                    Icon { class: "icon", icon: icons::MapKey {} }
-                                    Icon { class: "icon", icon: icons::MapValue {} }
+                                    IconTooltip { text: "Map key",
+                                        Icon { class: "icon", icon: icons::MapKey {} }
+                                    }
+                                    IconTooltip { text: "Map value",
+                                        Icon { class: "icon", icon: icons::MapValue {} }
+                                    }
                                 },
                                 StateValueRon { value: value.clone() }
                             }
@@ -296,8 +321,12 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
                             SubMenu {
                                 collapse_style: CollapseStyle::DetailsSummary,
                                 title: rsx! {
-                                    Icon { class: "icon", icon: icons::MapKey {} }
-                                    Icon { class: "icon", icon: icons::MapValue {} }
+                                    IconTooltip { text: "Map key",
+                                        Icon { class: "icon", icon: icons::MapKey {} }
+                                    }
+                                    IconTooltip { text: "Map value",
+                                        Icon { class: "icon", icon: icons::MapValue {} }
+                                    }
                                 },
                                 StateValueRon { value: value.clone() }
                             }
@@ -318,9 +347,10 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
                 SubMenu {
                     collapse_style: CollapseStyle::DetailsSummary,
                     title: rsx! {
-                        Icon { class: "icon", icon: icons::Seq {} }
+                        IconTooltip { text: "List or sequence",
+                            Icon { class: "icon", icon: icons::Seq {} }
+                        }
                     },
-                    // {icon}
                     for value in values {
                         StateValueRon { value: value.clone() }
                     }
@@ -332,18 +362,16 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
 
 fn can_render_directly(value: &ron::Value) -> bool {
     match value {
-        ron::Value::Bool(_) => true,
-        ron::Value::Char(_) => true,
-        ron::Value::Map(map) => match map.len() {
-            0 => true,
-            _ => false,
-        },
-        ron::Value::Number(_) => true,
+        ron::Value::Bool(_)
+        | ron::Value::Char(_)
+        | ron::Value::Number(_)
+        | ron::Value::String(_)
+        | ron::Value::Bytes(_)
+        | ron::Value::Unit => true,
+        ron::Value::Map(map) => map.is_empty(),
         ron::Value::Option(value) => {
             value.is_none() || value.as_ref().is_some_and(|v| can_render_directly(v))
         }
-        ron::Value::String(_) => true,
-        ron::Value::Bytes(_) => true,
         ron::Value::Seq(values) => match values.len() {
             0 => true,
             1 => {
@@ -355,6 +383,5 @@ fn can_render_directly(value: &ron::Value) -> bool {
             }
             _ => false,
         },
-        ron::Value::Unit => true,
     }
 }
