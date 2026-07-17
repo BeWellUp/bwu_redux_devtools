@@ -12,7 +12,7 @@ use dioxus::logger::tracing::debug;
 #[cfg(target_family = "wasm")]
 use gloo_storage::{LocalStorage, Storage};
 
-use super::{Action, Error, ReduxStateChange, State};
+use super::{Action, Error, ReduxStateChange, State, app_id::AppId};
 
 #[derive(Copy, Clone, Debug, Default)]
 #[non_exhaustive]
@@ -32,6 +32,19 @@ const THEME_NAME_STOREAGE_KEY: &str = "bwu_redux_devtools::theme_name";
 const THEME_NAME_CONFIG_KEY: &str = "theme-name";
 
 const DEFAULT_THEME_NAME: &str = "default";
+
+const HISTORY_LIMIT_FIELD: &str = "history-limit";
+const DROP_HISTORY_ON_RECONNECT_FIELD: &str = "drop-history-on-reconnect";
+
+#[cfg(target_family = "wasm")]
+fn app_setting_key(app_id: AppId, field: &str) -> String {
+    format!("bwu_redux_devtools::app::{app_id}::{field}")
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn app_setting_key(app_id: AppId, field: &str) -> String {
+    format!("apps.{app_id}.{field}")
+}
 
 impl Middleware<State, Action> for StorageMiddleware {
     fn apply(
@@ -105,6 +118,86 @@ impl Middleware<State, Action> for StorageMiddleware {
                     let _ = tx.send(result);
                 });
             }
+
+            // The first `StateUpdate` for an app in this GUI session is the
+            // moment to load its persisted per-app settings; once the app
+            // exists in the store, further `StateUpdate`s for it are no
+            // longer "new" and skip this (so a live in-session change made
+            // via the settings dialog is never clobbered by a stale reload).
+            Action::StateUpdate { app_id, .. } => {
+                let is_new_app =
+                    store.select(move |state: &State| state.app_states.get(&app_id).is_none());
+                if is_new_app {
+                    #[cfg(target_family = "wasm")]
+                    {
+                        if let Ok(limit) =
+                            LocalStorage::get::<usize>(app_setting_key(app_id, HISTORY_LIMIT_FIELD))
+                        {
+                            let _ = tx.send(Action::HistoryLimitChange { app_id, limit });
+                        }
+                        if let Ok(enabled) = LocalStorage::get::<bool>(app_setting_key(
+                            app_id,
+                            DROP_HISTORY_ON_RECONNECT_FIELD,
+                        )) {
+                            let _ =
+                                tx.send(Action::DropHistoryOnReconnectChange { app_id, enabled });
+                        }
+                    }
+                    #[cfg(not(target_family = "wasm"))]
+                    {
+                        if let Ok(settings) = get_config(&action, true) {
+                            if let Ok(limit) =
+                                settings.get_int(&app_setting_key(app_id, HISTORY_LIMIT_FIELD))
+                            {
+                                let _ = tx.send(Action::HistoryLimitChange {
+                                    app_id,
+                                    limit: usize::try_from(limit).unwrap_or_default(),
+                                });
+                            }
+                            if let Ok(enabled) = settings
+                                .get_bool(&app_setting_key(app_id, DROP_HISTORY_ON_RECONNECT_FIELD))
+                            {
+                                let _ = tx
+                                    .send(Action::DropHistoryOnReconnectChange { app_id, enabled });
+                            }
+                        }
+                    }
+                }
+            }
+
+            Action::HistoryLimitChange { app_id, limit } => {
+                #[cfg(target_family = "wasm")]
+                {
+                    let _ = LocalStorage::set(app_setting_key(app_id, HISTORY_LIMIT_FIELD), limit);
+                }
+                #[cfg(not(target_family = "wasm"))]
+                {
+                    let _ = write_config_value(
+                        &["apps", &app_id.to_string(), HISTORY_LIMIT_FIELD],
+                        Item::from(i64::try_from(limit).unwrap_or(i64::MAX)),
+                        &action,
+                    );
+                }
+            }
+
+            Action::DropHistoryOnReconnectChange { app_id, enabled } => {
+                #[cfg(target_family = "wasm")]
+                {
+                    let _ = LocalStorage::set(
+                        app_setting_key(app_id, DROP_HISTORY_ON_RECONNECT_FIELD),
+                        enabled,
+                    );
+                }
+                #[cfg(not(target_family = "wasm"))]
+                {
+                    let _ = write_config_value(
+                        &["apps", &app_id.to_string(), DROP_HISTORY_ON_RECONNECT_FIELD],
+                        Item::from(enabled),
+                        &action,
+                    );
+                }
+            }
+
             _ => {}
         }
 

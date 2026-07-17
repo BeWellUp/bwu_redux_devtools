@@ -8,8 +8,16 @@ use super::{GlobalCounter, StateChangeMessage, StateViewer, app_id::AppId};
 )]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Action {
+    DropHistoryOnReconnectChange {
+        app_id: AppId,
+        enabled: bool,
+    },
     Error(Error),
     Exit,
+    HistoryLimitChange {
+        app_id: AppId,
+        limit: usize,
+    },
     ReduxStateChange(ReduxStateChange),
     SelectedAppChange {
         app_id: AppId,

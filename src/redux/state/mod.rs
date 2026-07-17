@@ -1,4 +1,4 @@
-use std::{fmt::Display, pin::Pin, sync::Arc};
+use std::{collections::BTreeSet, fmt::Display, pin::Pin, sync::Arc};
 
 use app_id::AppId;
 use bwu_redux::{ActionFilter, StoreConfig, StoreWrapper, devtools_rpc};
@@ -53,7 +53,19 @@ pub struct AppState {
     pub selected_state_id: Option<GlobalCounter>,
     pub selected_state_viewer: StateViewer,
     pub selected_theme: String,
+    /// Number of history entries kept before the oldest are dropped.
+    pub history_limit: usize,
+    /// When an app restart is detected (its session counter drops), start
+    /// the history fresh instead of appending to what came before.
+    pub drop_history_on_reconnect: bool,
+    /// Action prefixes (see `extract_action_prefix`) the server should not
+    /// forward for this app.
+    pub paused_actions: BTreeSet<String>,
 }
+
+/// Default number of history entries kept per app before the oldest are
+/// dropped.
+pub(crate) const DEFAULT_HISTORY_LIMIT: usize = 200;
 
 impl Default for AppState {
     fn default() -> Self {
@@ -64,6 +76,9 @@ impl Default for AppState {
             selected_state_id: None,
             selected_state_viewer: StateViewer::default(),
             selected_theme: String::from("default"),
+            history_limit: DEFAULT_HISTORY_LIMIT,
+            drop_history_on_reconnect: false,
+            paused_actions: BTreeSet::new(),
         }
     }
 }

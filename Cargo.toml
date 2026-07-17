@@ -16,14 +16,12 @@ exclude = ["CLAUDE.md"]
 [dependencies]
 archery = "1"
 bwu_redux = { version = "0.1.0", default-features = false }
-config = { version = "0.15", optional = true }
 console-subscriber = { version = "0.5", optional = true }
 dioxus = { version = "0.7.9", features = ["router"] }
 dioxus-free-icons = { version = "0.10.0-alpha.1", features = ["lucide"] }
 # Pinned rev: crates.io only has a 0.0.0 placeholder for dioxus-primitives.
 # This git dep blocks crates.io publishing until upstream releases it.
 dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version = "0.0.1", default-features = false }
-directories = { version = "6", optional = true }
 futures = "0.3"
 futures-timer = { version = "3", default-features = false }
 getrandom = { version = "0.4", optional = true }
@@ -40,7 +38,6 @@ tokio = { version = "1", default-features = false, features = ["sync"] }
 tokio-stream = { version = "0.1", default-features = false, features = [
   "sync",
 ] }
-toml_edit = { version = "0.25", optional = true }
 tonic = { version = "0.14", default-features = false }
 tonic-web = { version = "0.14", default-features = false, optional = true }
 tonic-web-wasm-client = { version = "0.9", default-features = false, optional = true }
@@ -53,6 +50,14 @@ tracing-subscriber = { version = "0.3", features = [
 ], optional = true }
 uuid = { version = "1", features = ["v5", "v7", "serde"] }
 web-sys = { version = "0.3", features = ["Window", "Location"] }
+
+# Native settings persistence (redux/storage_middleware.rs); required
+# whenever the crate isn't targeting wasm, independent of the `desktop`
+# Cargo feature (the standalone server binary is native but has no GUI).
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+config = "0.15"
+directories = "6"
+toml_edit = "0.25"
 
 [dev-dependencies]
 pretty_assertions = "1"
@@ -72,9 +77,6 @@ web = [
   "uuid/rng-getrandom",
 ]
 desktop = [
-  "dep:config",
-  "dep:directories",
-  "dep:toml_edit",
   "dep:serde",
   "dioxus/desktop",
   "redux_devtools_server",
@@ -95,7 +97,11 @@ redux_devtools_server = [
   "tonic/transport",
   "tonic/server",
 ]
-standalone-server = ["dep:tracing-subscriber"]
+standalone-server = [
+  "redux_devtools_server",
+  "dep:tracing-subscriber",
+  "tokio/rt-multi-thread",
+]
 # tokio-console support for the standalone server; additionally requires
 # RUSTFLAGS="--cfg tokio_unstable"
 tokio-console = ["dep:console-subscriber"]

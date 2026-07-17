@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::{borrow::Cow, collections::BTreeSet, sync::Arc};
 
 use bwu_redux::SelectorFn;
 use ron::ser::to_string_pretty;
@@ -199,6 +199,41 @@ pub fn extract_action_prefix(input: &str) -> String {
     }
 
     input.to_owned()
+}
+
+pub fn select_selected_history_limit(state: &State) -> usize {
+    state
+        .selected_app_id
+        .and_then(|app_id| state.app_states.get(&app_id))
+        .map_or(super::DEFAULT_HISTORY_LIMIT, |app_state| {
+            app_state.history_limit
+        })
+}
+
+pub fn select_selected_drop_history_on_reconnect(state: &State) -> bool {
+    state
+        .selected_app_id
+        .and_then(|app_id| state.app_states.get(&app_id))
+        .is_some_and(|app_state| app_state.drop_history_on_reconnect)
+}
+
+pub fn select_selected_distinct_action_prefixes(state: &State) -> BTreeSet<String> {
+    select_selected_history(state)
+        .iter()
+        .map(|change| extract_action_prefix(&change.action))
+        .collect()
+}
+
+pub fn stream_selected_history_limit(store: Store) -> ChangesStream<usize> {
+    store.changes(select_selected_history_limit)
+}
+
+pub fn stream_selected_drop_history_on_reconnect(store: Store) -> ChangesStream<bool> {
+    store.changes(select_selected_drop_history_on_reconnect)
+}
+
+pub fn stream_selected_distinct_action_prefixes(store: Store) -> ChangesStream<BTreeSet<String>> {
+    store.changes(select_selected_distinct_action_prefixes)
 }
 
 pub fn select_selected_theme(state: &State) -> String {
