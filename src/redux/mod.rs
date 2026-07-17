@@ -1,5 +1,9 @@
 mod actions;
 pub use actions::*;
+mod pause_middleware;
+pub(crate) use pause_middleware::*;
+mod pause_sink;
+pub use pause_sink::*;
 mod reducers;
 pub(crate) use reducers::*;
 mod state;

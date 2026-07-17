@@ -50,6 +50,27 @@ pub(crate) fn reducer(state: State, action: &Action) -> State {
                 ..state
             }
         }
+        Action::PauseActionsChange {
+            app_id,
+            ref paused_prefixes,
+        } => {
+            let app_state = state.app_states.get(&app_id).map_or_else(
+                || AppState {
+                    app_id,
+                    ..AppState::default()
+                },
+                Clone::clone,
+            );
+            let app_state = AppState {
+                paused_actions: paused_prefixes.clone(),
+                ..app_state
+            };
+
+            State {
+                app_states: state.app_states.insert(app_id, app_state),
+                ..state
+            }
+        }
         Action::SelectedAppChange { app_id } => State {
             selected_app_id: Some(app_id),
             ..state

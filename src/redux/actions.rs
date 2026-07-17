@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use rpds::VectorSync;
 
 use super::{GlobalCounter, StateChangeMessage, StateViewer, app_id::AppId};
@@ -17,6 +19,14 @@ pub enum Action {
     HistoryLimitChange {
         app_id: AppId,
         limit: usize,
+    },
+    /// Replaces the whole paused-actions set for an app. Dispatched by the
+    /// settings dialog on every checkbox toggle, and by `StorageMiddleware`
+    /// to re-send a persisted set to the server when the app first connects
+    /// in a GUI session.
+    PauseActionsChange {
+        app_id: AppId,
+        paused_prefixes: BTreeSet<String>,
     },
     ReduxStateChange(ReduxStateChange),
     SelectedAppChange {

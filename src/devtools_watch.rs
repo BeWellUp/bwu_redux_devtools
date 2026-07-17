@@ -27,7 +27,9 @@ const DEV_FALLBACK_URL: &str = "http://localhost:49051";
 /// exposed same-origin, so the page origin is used verbatim. A plain
 /// `localhost`/`127.*` origin means `dx serve` development mode, where the
 /// devtools server runs separately on its default port.
-fn server_url() -> String {
+/// Determine the devtools server URL a web GUI should connect to (also used
+/// by the pause controller to send `SetPause` requests to the same server).
+pub fn server_url() -> String {
     let location = web_sys::window().map(|window| window.location());
     let hostname = location
         .as_ref()
