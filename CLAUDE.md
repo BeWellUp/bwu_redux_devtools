@@ -62,7 +62,7 @@ dioxus-desktop's image stack) fails to link under Cranelift.
 
 ### Components (`src/components/`)
 
-`daisyui/` holds DaisyUI-styled components vendored from the bwu_app workspace's internal component crate: `drawer`, `menu`, and `kbd` stay vendored (no official equivalent with the same look); `tab`, `lazy_list`, and `tooltip` are interim and get replaced by official Dioxus components (`dx components add ...`) restyled with DaisyUI variables. `hooks.rs`/`focus_provider.rs` are private support modules.
+`daisyui/` holds DaisyUI-styled components vendored from the bwu_app workspace's internal component crate: `drawer`, `menu`, and `kbd` (no official equivalent with the same look). `tabs/`, `virtual_list/`, and `tooltip/` are official Dioxus components copied in via `dx components add <name>`; their `style.css` files are restyled to use DaisyUI theme variables (`--color-*`, `--radius-field`) instead of the generated `dx-components-theme.css` palette (that file is deliberately not used — DaisyUI's own variables are the theme bridge, which keeps every component in sync with the theme switcher). Apply the same restyling pattern when adding further official components.
 
 ### Redux layer (`src/redux/`)
 

@@ -200,3 +200,19 @@ pub fn extract_action_prefix(input: &str) -> String {
 
     input.to_owned()
 }
+
+pub fn select_selected_theme(state: &State) -> String {
+    state.selected_theme.clone()
+}
+
+pub fn select_themes(state: &State) -> Vec<String> {
+    state.themes.iter().cloned().collect()
+}
+
+pub fn stream_selected_theme(store: Store) -> ChangesStream<String> {
+    store.changes(select_selected_theme)
+}
+
+pub fn stream_themes(store: Store) -> ChangesStream<Vec<String>> {
+    store.changes(select_themes)
+}

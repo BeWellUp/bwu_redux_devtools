@@ -1,5 +1,8 @@
-use bwu_redux_devtools::redux::{Action, ReduxStateChange, create_store};
+use bwu_redux_devtools::redux::{
+    Action, ReduxStateChange, create_store, selectors::stream_selected_theme,
+};
 use dioxus::prelude::*;
+use futures::StreamExt as _;
 use route::Route;
 
 pub(crate) mod components;
@@ -11,7 +14,6 @@ use bwu_redux_devtools::devtools_server::server::DevtoolsServer;
 pub(crate) mod views;
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
-const DX_COMPONENTS_THEME_CSS: Asset = asset!("/assets/dx-components-theme.css");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 fn main() {
@@ -27,6 +29,22 @@ fn App() -> Element {
     });
 
     let _ = store.dispatch(Action::ReduxStateChange(ReduxStateChange::StoreInit));
+
+    // Apply the selected DaisyUI theme to the app root (persisted via
+    // StorageMiddleware; "default" falls back to light/dark by system
+    // preference).
+    let mut selected_theme: Signal<String> = use_signal(|| String::from("default"));
+    let theme_store = store.clone();
+    let _ = use_resource(move || {
+        let store = theme_store.clone();
+        async move {
+            let mut stream = stream_selected_theme(store);
+
+            while let Some(value) = stream.next().await {
+                selected_theme.set(value);
+            }
+        }
+    });
 
     let dispatch_sender = store.get_dispatch_sender();
     #[cfg(not(target_family = "wasm"))]
@@ -50,9 +68,8 @@ fn App() -> Element {
         document::Title { "BWU Redux DevTools" }
         // Global app resources
         document::Link { rel: "icon", href: FAVICON }
-        document::Stylesheet { href: DX_COMPONENTS_THEME_CSS }
         document::Stylesheet { href: TAILWIND_CSS }
 
-        Router::<Route> {}
+        div { style: "display: contents", "data-theme": selected_theme(), Router::<Route> {} }
     }
 }

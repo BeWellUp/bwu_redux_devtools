@@ -50,6 +50,8 @@
 @source inline("relative");
 @source inline("route-menu-item");
 @source inline("static");
+@source inline("select");
+@source inline("select-sm");
 @source inline("status-neutral");
 @source inline("status-primary");
 @source inline("status-secondary");
@@ -79,7 +81,7 @@
 @source inline("w-{0..100}-progress-info");
 
 @plugin "daisyui" {
-  themes: light --default, dark --prefersdark, cupcake;
+  themes: all;
 }
 
 /* @theme { */

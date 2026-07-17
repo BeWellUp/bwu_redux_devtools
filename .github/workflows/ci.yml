@@ -40,6 +40,19 @@ jobs:
       - run: cargo clippy --features standalone-server,tokio-console --bin bwu_redux_devtools_server
       - run: cargo test
 
+  css:
+    name: CSS up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run css
+      - name: Fail if committed tailwind.css is stale
+        run: git diff --exit-code assets/tailwind.css
+
   wasm:
     name: Check (wasm32)
     runs-on: ubuntu-latest
