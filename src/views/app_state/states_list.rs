@@ -77,12 +77,6 @@ pub(crate) fn ActionListItem(props: ActionListItemProps) -> Element {
         let mut stream = facade.read().get_selected_change();
 
         while let Some(value) = stream.next().await {
-            tracing::warn!(
-                "AppId: {:?}, item: {}, selected: {}",
-                app_id.read(),
-                props.item,
-                value.clone().map(|c| c.counter).unwrap_or_default()
-            );
             is_selected.set(value.is_some_and(|c| c.counter == props.item));
         }
     });

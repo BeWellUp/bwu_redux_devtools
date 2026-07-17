@@ -134,3 +134,132 @@ pub(crate) fn reducer(state: State, action: &Action) -> State {
     // debug!("{state:?}");
     state
 }
+
+#[cfg(test)]
+mod tests {
+    use bwu_redux::ActionFilter as _;
+    use pretty_assertions::assert_eq;
+    use rpds::VectorSync;
+
+    use super::*;
+    use crate::redux::{DevToolsActionFilter, GlobalCounter, StateChangeMessage, app_id::AppId};
+
+    fn messages(range: std::ops::Range<u32>) -> VectorSync<StateChangeMessage> {
+        range
+            .map(|n| StateChangeMessage {
+                session_counter: n.into(),
+                action: format!("\"action-{n}\""),
+                state: format!("{n}"),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn theme_change_selects_known_theme() {
+        let state = reducer(
+            State::default(),
+            &Action::ThemeChange {
+                theme: String::from("dark"),
+            },
+        );
+        assert_eq!(state.selected_theme, "dark");
+        assert!(state.errors.is_empty());
+    }
+
+    #[test]
+    fn theme_change_rejects_unknown_theme() {
+        let state = reducer(
+            State::default(),
+            &Action::ThemeChange {
+                theme: String::from("no-such-theme"),
+            },
+        );
+        assert_eq!(state.selected_theme, "default");
+        assert_eq!(
+            state.errors.iter().next(),
+            Some(&Error::ThemeDoesNotExist(String::from("no-such-theme")))
+        );
+    }
+
+    #[test]
+    fn state_update_caps_history_at_200() {
+        let app_id = AppId::new();
+        let state = reducer(
+            State::default(),
+            &Action::StateUpdate {
+                app_id,
+                app_name: String::from("app"),
+                content: messages(0..150),
+            },
+        );
+        let state = reducer(
+            state,
+            &Action::StateUpdate {
+                app_id,
+                app_name: String::from("app"),
+                content: messages(150..250),
+            },
+        );
+        let app_state = state.app_states.get(&app_id).expect("app state");
+        assert_eq!(app_state.history.len(), 200);
+    }
+
+    #[test]
+    fn state_update_selects_first_connected_app() {
+        let app_id = AppId::new();
+        let state = reducer(
+            State::default(),
+            &Action::StateUpdate {
+                app_id,
+                app_name: String::from("app"),
+                content: messages(0..1),
+            },
+        );
+        assert_eq!(state.selected_app_id, Some(app_id));
+    }
+
+    #[test]
+    fn selected_state_change_toggles_selection() {
+        let app_id = AppId::new();
+        let state = reducer(
+            State::default(),
+            &Action::StateUpdate {
+                app_id,
+                app_name: String::from("app"),
+                content: messages(0..3),
+            },
+        );
+        let counter = GlobalCounter::from(1_usize);
+        let state = reducer(state, &Action::SelectedStateChange { counter });
+        assert_eq!(
+            state
+                .app_states
+                .get(&app_id)
+                .expect("app")
+                .selected_state_id,
+            Some(counter)
+        );
+        let state = reducer(state, &Action::SelectedStateChange { counter });
+        assert_eq!(
+            state
+                .app_states
+                .get(&app_id)
+                .expect("app")
+                .selected_state_id,
+            None
+        );
+    }
+
+    #[test]
+    fn devtools_filter_excludes_state_updates() {
+        let filter = DevToolsActionFilter;
+        assert!(!filter.filter(&Action::StateUpdate {
+            app_id: AppId::new(),
+            app_name: String::from("app"),
+            content: VectorSync::default(),
+        }));
+        assert!(filter.filter(&Action::ThemeChange {
+            theme: String::from("dark"),
+        }));
+    }
+}

@@ -38,6 +38,12 @@ npm run css:watch
 Note: do not build with `-Zcodegen-backend=cranelift` — the `pulp` crate (via
 dioxus-desktop's image stack) fails to link under Cranelift.
 
+Note: the committed Cargo.lock keeps the wasm-bindgen family at the version of
+the environment's `wasm-bindgen-cli` (currently 0.2.125). A plain `cargo
+update` will bump it and break `dx serve --platform web` until the CLI
+matches; re-pin with a temporary `=` version and `cargo update` if that
+happens.
+
 ## Feature Flags
 
 | Feature | Purpose |

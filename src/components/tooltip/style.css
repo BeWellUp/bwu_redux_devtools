@@ -10,6 +10,7 @@
 
 .dx-tooltip-content {
   pointer-events: none;
+  width: max-content;
   position: absolute;
   z-index: 1000;
   max-width: 250px;

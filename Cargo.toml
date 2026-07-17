@@ -54,6 +54,9 @@ tracing-subscriber = { version = "0.3", features = [
 uuid = { version = "1", features = ["v5", "v7", "serde"] }
 web-sys = { version = "0.3", features = ["Window", "Location"] }
 
+[dev-dependencies]
+pretty_assertions = "1"
+
 [features]
 # desktop as default reduces errors in IDE for conditional code
 # to run for web use dx serve --platform web --no-default-features --features web

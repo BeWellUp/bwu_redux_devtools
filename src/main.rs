@@ -30,9 +30,10 @@ fn App() -> Element {
 
     let _ = store.dispatch(Action::ReduxStateChange(ReduxStateChange::StoreInit));
 
-    // Apply the selected DaisyUI theme to the app root (persisted via
+    // Apply the selected DaisyUI theme on the document root (persisted via
     // StorageMiddleware; "default" falls back to light/dark by system
-    // preference).
+    // preference). Theme names come from the fixed THEME_NAMES list, so the
+    // eval interpolation is safe.
     let mut selected_theme: Signal<String> = use_signal(|| String::from("default"));
     let theme_store = store.clone();
     let _ = use_resource(move || {
@@ -44,6 +45,12 @@ fn App() -> Element {
                 selected_theme.set(value);
             }
         }
+    });
+    let _ = use_effect(move || {
+        let theme = selected_theme();
+        let _ = document::eval(&format!(
+            "document.documentElement.setAttribute('data-theme', '{theme}');"
+        ));
     });
 
     let dispatch_sender = store.get_dispatch_sender();
@@ -70,6 +77,6 @@ fn App() -> Element {
         document::Link { rel: "icon", href: FAVICON }
         document::Stylesheet { href: TAILWIND_CSS }
 
-        div { style: "display: contents", "data-theme": selected_theme(), Router::<Route> {} }
+        Router::<Route> {}
     }
 }
