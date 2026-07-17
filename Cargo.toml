@@ -61,6 +61,7 @@ default = ["desktop"]
 web = [
   "dep:gloo-storage",
   "dep:tonic-web-wasm-client",
+  "dioxus-primitives/web",
   "dioxus/web",
   "futures-timer/wasm-bindgen",
   "getrandom/wasm_js",

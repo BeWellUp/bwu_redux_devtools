@@ -120,6 +120,8 @@
       background-color: color-mix(in oklab,var(--color-base-content)10%,transparent);
     }
 
+    /* the row wrapper is a li (old LazyList) or a div.list-row (VirtualList) */
+    .list-row:has(.item-active),
     li:has(.item-active) {
       background-color: color-mix(in oklab,var(--color-base-content)10%,transparent);
     }

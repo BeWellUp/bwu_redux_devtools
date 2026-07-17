@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use futures::StreamExt as _;
 
 use super::{ActionListItemFacade, StatesListFacade};
-use crate::components::daisyui::{LazyList, RenderItemProps};
+use crate::components::virtual_list::VirtualList;
 
 #[component]
 pub(crate) fn StatesList() -> Element {
@@ -21,17 +21,29 @@ pub(crate) fn StatesList() -> Element {
         }
     });
 
-    // Without reading from the signal here only one item is rendered. I don't understand why
+    // Subscribe this component to `items` so every history change re-renders
+    // the list with a fresh `render_item` closure.
     let _ = items();
+
+    let count = use_memo(move || items.read().len());
 
     rsx! {
         div { class: "states-list",
             div { class: "states-list-inner",
-                LazyList {
-                    class: "bg-base-200",
-                    item_class: "list-row block",
-                    items,
-                    render_item: ListItem,
+                VirtualList {
+                    class: "bwu-list relative overflow-y-auto h-full bg-base-200",
+                    count,
+                    render_item: move |idx: usize| {
+                        let item = items.read().get(idx).copied();
+                        match item {
+                            Some(item) => rsx! {
+                                div { class: "list-row block",
+                                    ActionListItem { item }
+                                }
+                            },
+                            None => rsx! {},
+                        }
+                    },
                 }
             }
         }
@@ -95,12 +107,5 @@ pub(crate) fn ActionListItem(props: ActionListItemProps) -> Element {
         }
     } else {
         rsx! {}
-    }
-}
-
-#[component]
-fn ListItem(props: RenderItemProps<GlobalCounter>) -> Element {
-    rsx! {
-        ActionListItem { item: props.item }
     }
 }
