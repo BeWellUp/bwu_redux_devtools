@@ -216,7 +216,7 @@ fn get_config(action: &Action, include_environment: bool) -> Result<Config, Acti
 
 #[cfg(not(target_family = "wasm"))]
 fn get_config_file_path(action: &Action) -> Result<PathBuf, Action> {
-    if let Some(project_dir) = ProjectDirs::from("com", "bewellup", "bwu_redux") {
+    if let Some(project_dir) = ProjectDirs::from("net", "zoechbauer", "bwu_redux_devtools") {
         let config_dir = project_dir.config_dir();
         Ok(config_dir.join("settings"))
     } else {

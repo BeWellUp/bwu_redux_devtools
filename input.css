@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @source "assets/*.{html,js}";
-@source "src/views/*.{rs}";
-@source "src/components/*.{rs}";
-@source "src/daisyui/*.{rs}";
+@source "src/**/*.rs";
 
 @source inline("absolute");
 @source inline("btn");

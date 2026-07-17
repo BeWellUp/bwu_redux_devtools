@@ -1,7 +1,13 @@
 {
+  "scripts": {
+    "css": "tailwindcss -i ./input.css -o ./assets/tailwind.css",
+    "css:watch": "tailwindcss -i ./input.css -o ./assets/tailwind.css --watch"
+  },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.1.11",
     "autoprefixer": "^10.4.21",
     "daisyui": "^5.0.27",
-    "postcss": "^8.5.3"
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.11"
   }
 }
