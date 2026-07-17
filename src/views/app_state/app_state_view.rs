@@ -4,9 +4,21 @@ use futures::StreamExt as _;
 
 use super::{AppStateViewFacade, StateExplorer, StatesList};
 use crate::{
-    components::daisyui::{Tab, TabList},
+    components::tabs::{TabList, TabTrigger, Tabs},
     route::Route,
 };
+
+const TAB_TREE: &str = "tree";
+const TAB_JSON: &str = "json";
+const TAB_RON: &str = "ron";
+
+const fn viewer_tab_value(viewer: StateViewer) -> &'static str {
+    match viewer {
+        StateViewer::Tree => TAB_TREE,
+        StateViewer::Json => TAB_JSON,
+        StateViewer::Ron => TAB_RON,
+    }
+}
 
 #[component]
 pub fn AppStateView(app_id: String) -> Element {
@@ -60,22 +72,20 @@ pub fn AppStateView(app_id: String) -> Element {
         div { class: "app-state-view", id: "app-state",
             StatesList {}
             div { class: "state-explorer",
-                TabList {
-                    // tabs_style: TabsStyle::Lift,
-                    Tab {
-                        is_active: state_viewer() == StateViewer::Tree,
-                        onclick: move |_| facade.read().dispatch(Action::StateViewerChange(StateViewer::Tree)),
-                        "Tree"
-                    }
-                    Tab {
-                        is_active: (state_viewer)() == StateViewer::Json,
-                        onclick: move |_| facade.read().dispatch(Action::StateViewerChange(StateViewer::Json)),
-                        "JSON"
-                    }
-                    Tab {
-                        is_active: (state_viewer)() == StateViewer::Ron,
-                        onclick: move |_| facade.read().dispatch(Action::StateViewerChange(StateViewer::Ron)),
-                        "Ron"
+                Tabs {
+                    value: use_memo(move || Some(viewer_tab_value(state_viewer()).to_owned())),
+                    on_value_change: move |value: String| {
+                        let viewer = match value.as_str() {
+                            TAB_JSON => StateViewer::Json,
+                            TAB_RON => StateViewer::Ron,
+                            _ => StateViewer::Tree,
+                        };
+                        facade.read().dispatch(Action::StateViewerChange(viewer));
+                    },
+                    TabList {
+                        TabTrigger { value: TAB_TREE, index: 0_usize, "Tree" }
+                        TabTrigger { value: TAB_JSON, index: 1_usize, "JSON" }
+                        TabTrigger { value: TAB_RON, index: 2_usize, "Ron" }
                     }
                 }
                 div { class: "state-explorer-body",

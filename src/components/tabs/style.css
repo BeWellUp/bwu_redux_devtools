@@ -1,0 +1,33 @@
+/*
+ * The visual style comes from the DaisyUI `tabs`/`tab` classes added in
+ * component.rs; the scoped classes below only keep structural behavior so
+ * the DaisyUI theme (including theme switching) controls the look.
+ */
+
+.dx-tabs {
+    display: contents;
+}
+
+.dx-tabs-list {
+    box-sizing: border-box;
+}
+
+.dx-tabs-trigger {
+    cursor: pointer;
+}
+
+.dx-tabs-trigger[data-disabled="true"] {
+    cursor: not-allowed;
+}
+
+.dx-tabs-content {
+    box-sizing: border-box;
+}
+
+.dx-tabs-content-themed {
+    box-sizing: border-box;
+}
+
+.dx-tabs-content[data-state="inactive"] {
+    display: none;
+}

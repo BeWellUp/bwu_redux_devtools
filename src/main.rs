@@ -13,6 +13,7 @@ use bwu_redux_devtools::devtools_server::server::DevtoolsServer;
 pub(crate) mod views;
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
+const DX_COMPONENTS_THEME_CSS: Asset = asset!("/assets/dx-components-theme.css");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 fn main() {
@@ -55,6 +56,7 @@ fn App() -> Element {
         document::Title { "BWU Redux DevTools" }
         // Global app resources
         document::Link { rel: "icon", href: FAVICON }
+        document::Stylesheet { href: DX_COMPONENTS_THEME_CSS }
         document::Stylesheet { href: TAILWIND_CSS }
 
         TooltipPortal {}
