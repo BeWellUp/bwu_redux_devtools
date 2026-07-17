@@ -1,0 +1,462 @@
+@import "tailwindcss";
+@source "assets/*.{html,js}";
+@source "src/views/*.{rs}";
+@source "src/components/*.{rs}";
+@source "src/daisyui/*.{rs}";
+
+@source inline("absolute");
+@source inline("btn");
+@source inline("checkbox");
+@source inline("collapse");
+@source inline("collapse-arrow");
+@source inline("collapse-content");
+@source inline("collapse-title");
+@source inline("details");
+@source inline("drawer");
+@source inline("drawer-content");
+@source inline("drawer-overlay");
+@source inline("drawer-side");
+@source inline("drawer-toggle");
+@source inline("drawer-left-open-close");
+@source inline("dropdown-content");
+@source inline("dropdown-right");
+@source inline("fixed");
+@source inline("flex");
+@source inline("focus:outline-hidden");
+@source inline("h-full");
+@source inline("kbd");
+@source inline("list");
+@source inline("list-row");
+@source inline("menu");
+@source inline("menu-active");
+@source inline("menu-disabled");
+@source inline("menu-dropdown");
+@source inline("menu-dropdown-show");
+@source inline("menu-dropdown-toggle");
+@source inline("menu-focus");
+@source inline("menu-horizontal");
+@source inline("menu-item");
+@source inline("menu-lg");
+@source inline("menu-md");
+@source inline("menu-sm");
+@source inline("menu-title");
+@source inline("menu-vertical");
+@source inline("menu-xl");
+@source inline("menu-xs");
+@source inline("min-w-md");
+@source inline("nowrap");
+@source inline("ol");
+@source inline("overflow-y-auto");
+@source inline("page-footer");
+@source inline("progress");
+@source inline("relative");
+@source inline("route-menu-item");
+@source inline("static");
+@source inline("status-neutral");
+@source inline("status-primary");
+@source inline("status-secondary");
+@source inline("status-accent");
+@source inline("status-info");
+@source inline("status-success");
+@source inline("status-warning");
+@source inline("status-error");
+@source inline("status-sm");
+@source inline("sticky");
+@source inline("summary");
+@source inline("tab");
+@source inline("tab-content");
+@source inline("tab-lift");
+@source inline("tabs-lift");
+@source inline("tabs-border");
+@source inline("tabs-box");
+@source inline("tooltip");
+@source inline("tooltip-content");
+@source inline("tooltip-open");
+@source inline("tooltip-right");
+@source inline("tooltip-left");
+@source inline("tooltip-top");
+@source inline("tooltip-bottom");
+@source inline("ul");
+@source inline("visible");
+@source inline("w-{0..100}-progress-info");
+
+@plugin "daisyui" {
+  themes: light --default, dark --prefersdark, cupcake;
+}
+
+/* @theme { */
+  /* --color-outline: oklch(0.72 0.11 178); */
+/* } */
+
+@layer commponents {
+  *,*:hover {
+    scrollbar-color: var(--color-neutral-content);
+    scrollbar-width: auto;
+  }
+  html,body {
+    overflow-y: hidden;
+    height: 100dvh;
+  }
+
+  .bwu-list {
+    border-radius: var(--radius-field);
+    border-width: var(--border);
+    border-color: var(--color-base-100);
+    box-shadow: var(--shadow-xl);
+    @apply focus-within:outline-solid focus-within:outline-base-content focus-within:outline-1 focus:outline-2;
+
+    /* & :where(.list-row) { */
+    /*   /\* padding: 0; *\/ */
+    /*   display: flex; */
+    /* } */
+
+    .list-row {
+      @apply p-0 rounded-none;
+    }
+    .list-row:hover {
+      background-color: color-mix(in oklab,var(--color-base-content)10%,transparent);
+    }
+    .list-row:focus-within {
+      /* @apply  block focus-within:outline-solid focus-within:outline-base-content focus-within:outline-2 outline-offset-[-4px]; */
+      outline: none;
+      background-color: color-mix(in oklab,var(--color-base-content)10%,transparent);
+    }
+
+    li:has(.item-active) {
+      background-color: color-mix(in oklab,var(--color-base-content)10%,transparent);
+    }
+  }
+
+  .collapse {
+    @apply bg-base-100 border border-base-300;
+
+    .collapse-title {
+      @apply font-semibold;
+    }
+
+    .collapse-content {
+      @apply text-sm;
+    }
+  }
+
+  dialog button.custom-modal-close  {
+    @apply btn-sm btn-circle btn-ghost absolute right-2 top-2;
+
+    span::after {
+      content: "✕";
+    }
+  }
+
+  dialog .modal-box > h3 {
+    @apply text-lg font-bold;
+  }
+
+  .drawer {
+    @apply h-screen rounded overflow-hidden drawer-open;
+
+    .page-content {
+      /* @apply flex h-full w-full items-center p-4 border-b border-base-300 overflow-y-auto; */
+    }
+    .drawer-content {
+      /* @apply flex-column h-full w-full p-4; */
+      padding: 0;
+      height: calc(100% - 2em);
+    }
+
+    .page-footer {
+      display: flex;
+      align-items: center;
+      position: absolute;
+      bottom: 0;
+      height: 2em;
+      padding-bottom: var(--spacing);
+      gap: 1em;
+    }
+  }
+
+  /* narrow drawer menu */
+  .drawer-toggle:checked~.drawer-side  {
+    .menu {
+      @apply w-14 px-1;
+    }
+
+    .menu-item.drawer-left-open-close .drawer-close{
+      display: none;
+    }
+
+    .menu-item {
+      width: fit-content;
+
+      a {
+        width: fit-content;
+      }
+    }
+    .menu-item span {
+      display: none;
+    }
+
+    .menu-title {
+      visibility: hidden;
+    }
+  }
+
+  /* wide drawer menu */
+  .drawer-toggle:not(:checked)~.drawer-side   {
+    .menu-item.drawer-left-open-close {
+      align-items: flex-end;
+    }
+
+    .menu-item.drawer-left-open-close .drawer-open {
+      display: none;
+    }
+  }
+
+  .drawer-side {
+    & > .menu {
+      @apply bg-base-200 text-base-content min-h-full w-56 p-4;
+    }
+
+    & > .menu-title {
+      @apply @max-[50px]:invisible;
+    }
+  }
+
+  .dropdown.menu {
+    @apply w-52 rounded-box bg-base-100 shadow-sm;
+  }
+
+  .join {
+    @apply bg-base-100;
+  }
+
+  /* drawer narrow/wide button */
+  label.drawer-left-open-close {
+    border: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .menu-active {
+    background-color: color-mix(in oklab,var(--color-base-content)10%,transparent);
+  }
+
+  .menu {
+    @apply bg-base-200 rounded-box;
+  }
+
+  .menu-item .menu-text {
+    @apply whitespace-nowrap overflow-hidden;
+  }
+
+  .menu-vertical {
+    @apply lg:menu-horizontal bg-base-200 rounded-box;
+  }
+
+
+  /* .drawer .menu { */
+  /*   container-type: inline-size; */
+  /* } */
+
+  /* @container (max-width: 60px) { */
+  /*   .span { */
+  /*     display: none; */
+  /*   } */
+  /* } */
+
+
+  .splitter {
+    align-items: center;
+    display: flex;
+
+    border-width: 0;
+
+    &.splitter-vertical {
+      height: 24rem;
+      width: 100%;
+    }
+    &.splitter-horizontal {
+      flex-direction: column;
+      width: 24rem;
+      height: 100%;
+    }
+    .splitter-first {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+
+      &.splitter-vertical {
+        width: 50%;
+        height: 100%;
+      }
+      &.splitter-horizontal {
+        height: 50%;
+        width: 100%;
+      }
+    }
+
+    .splitter-resizer {
+      user-select: none;
+      touch-action: none;
+      border: 1px solid color-mix(in oklab,var(--color-base-content)10%,transparent);
+
+      &.splitter-vertical {
+        cursor: ew-resize;
+        height: 90%;
+        width: 4px;
+      }
+      &.splitter-horizontal {
+        cursor: ns-resize;
+        width: 90%;
+        height: 4px;
+      }
+
+
+      &:hover {
+        border: 1px solid var(--color-accent);
+      }
+    }
+
+    .splitter-second {
+      flex: 1;
+
+      align-items: center;
+      display: flex;
+      justify-content: center;
+    }
+  }
+
+  .no-app-selected {
+    @apply flex items-center justify-center h-full text-base-content/50;
+  }
+
+  .app-state-view {
+    @apply flex flex-row p-4 gap-x-4;
+  }
+
+  .state-explorer {
+    @apply flex flex-col items-start;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    a {
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .state-explorer-body {
+    @apply flex flex-col items-start gap-y-4 overflow-y-scroll w-full;
+    height: calc(100dvh - 6em);
+  }
+
+  .states-list {
+    @apply min-w-xs;
+    height: calc(100dvh - 4em);
+  }
+
+  .states-list-inner {
+    @apply h-full;
+  }
+
+  .action-list-item {
+    /* list-col-grow was dropped from this @apply: it is not a real utility
+       in daisyUI 5 / Tailwind 4 (it works via :has() on .list-row, which is
+       inert here because the row is `block` and this item is `flex`). */
+    @apply flex flex-nowrap p-2;
+  }
+
+  .action-name {
+    @apply text-ellipsis grow;
+  }
+
+  .state-code-block {
+    @apply whitespace-pre-wrap rounded-box bg-base-200 p-4 text-xs font-mono font-thin;
+  }
+
+  .map-kv-pair {
+    @apply flex flex-row gap-x-2;
+  }
+
+  svg.icon {
+    @apply size-4;
+  }
+
+  .tab-content {
+    @apply border-base-300 bg-base-100 p-6;
+  }
+
+  /* For some reason this color style is lost for fixed table headers */
+  th {
+    color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+  }
+
+  td,th {
+    white-space: pre;
+  }
+  td:fist-child,th:first-child {
+    @apply sticky left-0 z-10 bg-base-100
+  }
+
+  .text-ellipsis {
+    white-space: nowrap;
+  }
+
+  /* .table { */
+  /*   thead,tbody tr { */
+  /*     display: table; */
+  /*     width: 100%; */
+  /*     table-layout:fixed; */
+  /*   } */
+  /*   tbody { */
+  /*     display: block; */
+  /*     overflow-y: auto; */
+  /*     table-layout: fixed; */
+  /*     max-height: 100px; */
+  /*   } */
+  /*   td,th { */
+  /*     white-space: nowrap; */
+  /*   } */
+  /* } */
+
+  /* prevent flickering of tooltips on icons */
+  .tooltip-open {
+    pointer-events: none;
+  }
+
+  .tooltip .kbd:first-of-type {
+    @apply ml-3;
+  }
+}
+
+@layer utilities {
+  ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-base-content);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border-width: 0;
+    border-style: solid;
+    border-radius: 2px;
+    /* background-color: var(--color-neutral-content); */
+    background-color: color-mix(in oklab,var(--color-base-content)10%,transparent);
+  }
+
+  /* ::webkit-scrollbar:hover { */
+  /*   background-color: var(--color-accent-content); */
+  /* } */
+
+  ::-webkit-scrollbar-track:hover {
+     background-color: var(--color-base-100);
+  }
+
+  /* ::-webkit-scrollbar-track-piece { */
+  /* } */
+}

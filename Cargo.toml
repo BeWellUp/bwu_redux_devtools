@@ -1,0 +1,190 @@
+[package]
+name = "bwu_redux_devtools"
+version = "0.1.0"
+authors = ["Guenter Zoechbauer <guenter@zoechbauer.net>"]
+edition = "2024"
+rust-version = "1.88"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+
+description = "Redux DevTools GUI and gRPC server for bwu_redux stores (Dioxus desktop/web)"
+repository = "https://github.com/BeWellUp/bwu_redux_devtools"
+keywords = ["redux", "devtools", "dioxus", "debugging"]
+categories = ["development-tools::debugging", "gui"]
+exclude = ["CLAUDE.md"]
+
+[dependencies]
+archery = "1"
+bwu_redux = { version = "0.1.0", default-features = false }
+config = { version = "0.15", optional = true }
+console-subscriber = { version = "0.5", optional = true }
+dioxus = { version = "0.7.9", features = ["router"] }
+dioxus-free-icons = { version = "0.10.0-alpha.1", features = ["lucide"] }
+directories = { version = "6", optional = true }
+futures = "0.3"
+futures-timer = { version = "3", default-features = false }
+getrandom = { version = "0.4", optional = true }
+gloo-storage = { version = "0.4", optional = true }
+http = "1"
+prost = "0.14"
+regex = "1"
+ron = { version = "0.12", default-features = false }
+rpds = "1"
+serde = { version = "1", features = ["derive", "rc"], optional = true }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", default-features = false, features = ["sync"] }
+tokio-stream = { version = "0.1", default-features = false, features = [
+  "sync",
+] }
+toml_edit = { version = "0.25", optional = true }
+tonic = { version = "0.14", default-features = false }
+tonic-web = { version = "0.14", default-features = false, optional = true }
+tonic-web-wasm-client = { version = "0.9", default-features = false, optional = true }
+tower-http = { version = "0.7", features = ["cors"] }
+tracing = { version = "0.1", default-features = false }
+tracing-subscriber = { version = "0.3", features = [
+  "env-filter",
+  "std",
+  "fmt",
+], optional = true }
+uuid = { version = "1", features = ["v5", "v7", "serde"] }
+web-sys = { version = "0.3", features = ["Window", "Location"] }
+
+[features]
+# desktop as default reduces errors in IDE for conditional code
+# to run for web use dx serve --platform web --no-default-features --features web
+default = ["desktop"]
+web = [
+  "dep:gloo-storage",
+  "dep:tonic-web-wasm-client",
+  "dioxus/web",
+  "futures-timer/wasm-bindgen",
+  "getrandom/wasm_js",
+  "redux_devtools",
+  "uuid/rng-getrandom",
+]
+desktop = [
+  "dep:config",
+  "dep:directories",
+  "dep:toml_edit",
+  "dep:serde",
+  "dioxus/desktop",
+  "redux_devtools_server",
+  "bwu_redux/non_wasm",
+]
+redux_devtools = [
+  "bwu_redux/redux_devtools",
+  "dep:serde",
+  "dep:tonic-web-wasm-client",
+  "rpds/serde",
+]
+redux_devtools_server = [
+  "redux_devtools",
+  "bwu_redux/server",
+  "dep:tonic-web",
+  "rpds/serde",
+  "tonic/router",
+  "tonic/transport",
+  "tonic/server",
+]
+standalone-server = ["dep:tracing-subscriber"]
+# tokio-console support for the standalone server; additionally requires
+# RUSTFLAGS="--cfg tokio_unstable"
+tokio-console = ["dep:console-subscriber"]
+
+[[bin]]
+name = "bwu_redux_devtools"
+path = "src/main.rs"
+
+[[bin]]
+name = "bwu_redux_devtools_server"
+path = "src/standalone_server.rs"
+required-features = ["standalone-server"]
+
+[lints.rust]
+future_incompatible = { level = "warn", priority = -1 }
+keyword_idents = { level = "warn", priority = 1 }
+unused = { level = "warn", priority = 1 }
+ffi_unwind_calls = "warn"
+let-underscore = "allow"
+macro_use_extern_crate = "warn"
+meta_variable_misuse = "warn"
+missing_abi = "warn"
+missing_copy_implementations = "warn"
+missing_debug_implementations = "warn"
+missing_docs = "allow"
+non_ascii_idents = "warn"
+nonstandard-style = "warn"
+rust-2018-compatibility = "warn"
+rust-2018-idioms = "warn"
+rust-2021-compatibility = "warn"
+single_use_lifetimes = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unreachable_pub = "warn"
+unsafe_code = "warn"
+unsafe_op_in_unsafe_fn = "warn"
+unused_crate_dependencies = "allow"
+unused_import_braces = "warn"
+unused_lifetimes = "warn"
+unused_qualifications = "allow"
+unused_results = "warn"
+variant_size_differences = "warn"
+warnings = "warn"
+
+[lints.clippy]
+cargo = { level = "warn", priority = -1 }
+complexity = { level = "warn", priority = -1 }
+correctness = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+restriction = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+absolute_paths = "allow"
+arbitrary_source_item_ordering = "allow"
+impl_trait_in_params = "allow"
+implicit_return = "allow"
+infinite_loop = "allow"
+integer_division_remainder_used = "allow"
+min_ident_chars = "allow"
+missing_docs_in_private_items = "allow"
+missing_errors_doc = "allow"
+missing_trait_methods = "allow"
+mod_module_files = "allow"
+modulo_arithmetic = "allow"
+pattern_type_mismatch = "allow"
+pub_use = "allow"
+pub_with_shorthand = "allow"
+pub_without_shorthand = "warn"
+question_mark_used = "allow"
+redundant_pub_crate = "allow"
+ref_patterns = "allow"
+separated_literal_suffix = "allow"
+shadow_reuse = "allow"
+shadow_same = "allow"
+shadow_unrelated = "allow"
+single_call_fn = "allow"
+single_char_lifetime_names = "allow"
+std_instead_of_alloc = "allow"
+std_instead_of_core = "allow"
+# GUI-app-specific allows (Dioxus component code)
+arithmetic_side_effects = "allow"
+as_conversions = "allow"
+clone_on_ref_ptr = "allow"
+default_numeric_fallback = "allow"
+exhaustive_enums = "allow"
+exhaustive_structs = "allow"
+field_scoped_visibility_modifiers = "allow"
+float_arithmetic = "allow"
+let_underscore_future = "allow"
+let_underscore_must_use = "allow"
+let_underscore_untyped = "allow"
+missing_const_for_fn = "allow"
+missing_inline_in_public_items = "allow"
+multiple_crate_versions = "allow"
+must_use_candidate = "allow"
+needless_pass_by_value = "allow"
+same_name_method = "allow"

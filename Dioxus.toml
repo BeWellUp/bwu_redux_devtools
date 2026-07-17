@@ -1,0 +1,30 @@
+[application]
+name = "BWU Redux DevTools"
+default_platform = "desktop"
+out_dir = "dist"
+asset_dir = "assets"
+
+[web.app]
+
+# HTML title tag content
+title = "bwu_redux_gui"
+
+[web.watcher]
+watch_path = ["src", "assets"]
+reload_html = true
+index_on_404 = true
+
+# include `assets` in web platform
+# [web.resource]
+
+# Additional CSS style files
+# style = ["assets/css/tailwind.css"]
+
+# Additional JavaScript files
+script = []
+
+[web.resource.dev]
+
+# Javascript code file
+# serve: [dev-server] only
+script = []

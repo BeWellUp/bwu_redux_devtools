@@ -1,0 +1,8 @@
+allow-expect-in-tests = true
+allow-indexing-slicing-in-tests = true
+allow-panic-in-tests = true
+allow-unwrap-in-tests = true
+allowed-scripts = ["Latin"]
+avoid-breaking-exported-api = true
+cognitive-complexity-threshold = 30
+doc-valid-idents = ["..", "DevTools"]

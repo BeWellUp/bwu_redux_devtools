@@ -1,0 +1,5 @@
+# List of options https://rust-lang.github.io/rustfmt or rustfmt --help=config
+edition = "2024"
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"
+newline_style = "Unix"

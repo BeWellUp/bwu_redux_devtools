@@ -1,0 +1,24 @@
+scrollback: 10000
+procs:
+  code_checker_all:
+    shell: bacon --summary --no-wrap
+    autostart: false
+  # designer_server:
+  #   cmd: ["cruns"]
+  dx_desktop:
+    # cwd: "<CONFIG_DIR>/bwu_redux_gui"
+    shell: tmux -c dx serve --nightly --platform desktop --always-on-top false --interactive
+    env:
+      RUST_LOG: trace
+    autostart: false
+  dx_web:
+    # cwd: "<CONFIG_DIR>/bwu_redux_gui"
+    shell: dx serve --nightly --platform web --port 33333 --interactive
+    env:
+      RUST_LOG: trace
+    autostart: false
+  tailwind:
+    shell: tailwindcss -i ./input.css -o ./assets/tailwind.css --watch
+    autostart: true
+  cargo_check_err:
+    shell: RUSTFLAGS="$RUSTFLAGS -Awarnings" cargo check --color always --all-targets
