@@ -1,8 +1,9 @@
 use bwu_redux_devtools::redux::{Action, StateViewer, Store, app_id::AppId};
 use dioxus::prelude::*;
+use dioxus_free_icons::{Icon, icons::ld_icons::LdSettings};
 use futures::StreamExt as _;
 
-use super::{AppStateViewFacade, StateExplorer, StatesList};
+use super::{AppSettingsDialog, AppStateViewFacade, StateExplorer, StatesList};
 use crate::{
     components::tabs::{TabList, TabTrigger, Tabs},
     route::Route,
@@ -66,26 +67,39 @@ pub fn AppStateView(app_id: String) -> Element {
         }
     });
 
+    let mut settings_open = use_signal(|| false);
+
     rsx! {
         document::Title { "{selected_app_name} - BWU Redux" }
 
         div { class: "app-state-view", id: "app-state",
             StatesList {}
             div { class: "state-explorer",
-                Tabs {
-                    value: use_memo(move || Some(viewer_tab_value(state_viewer()).to_owned())),
-                    on_value_change: move |value: String| {
-                        let viewer = match value.as_str() {
-                            TAB_JSON => StateViewer::Json,
-                            TAB_RON => StateViewer::Ron,
-                            _ => StateViewer::Tree,
-                        };
-                        facade.read().dispatch(Action::StateViewerChange(viewer));
-                    },
-                    TabList {
-                        TabTrigger { value: TAB_TREE, index: 0_usize, "Tree" }
-                        TabTrigger { value: TAB_JSON, index: 1_usize, "JSON" }
-                        TabTrigger { value: TAB_RON, index: 2_usize, "Ron" }
+                div { class: "state-explorer-tabbar",
+                    Tabs {
+                        value: use_memo(move || Some(viewer_tab_value(state_viewer()).to_owned())),
+                        on_value_change: move |value: String| {
+                            let viewer = match value.as_str() {
+                                TAB_JSON => StateViewer::Json,
+                                TAB_RON => StateViewer::Ron,
+                                _ => StateViewer::Tree,
+                            };
+                            facade.read().dispatch(Action::StateViewerChange(viewer));
+                        },
+                        TabList {
+                            TabTrigger { value: TAB_TREE, index: 0_usize, "Tree" }
+                            TabTrigger { value: TAB_JSON, index: 1_usize, "JSON" }
+                            TabTrigger { value: TAB_RON, index: 2_usize, "Ron" }
+                        }
+                    }
+                    if let Some(app_id) = selected_app_id() {
+                        button {
+                            class: "btn btn-ghost btn-sm btn-circle",
+                            "aria-label": "App settings",
+                            onclick: move |_| settings_open.set(true),
+                            Icon { icon: LdSettings }
+                        }
+                        AppSettingsDialog { app_id, open: settings_open }
                     }
                 }
                 div { class: "state-explorer-body",

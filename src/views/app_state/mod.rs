@@ -1,5 +1,9 @@
 mod action_list_item_facade;
 use action_list_item_facade::ActionListItemFacade;
+mod app_settings_dialog;
+use app_settings_dialog::AppSettingsDialog;
+mod app_settings_facade;
+use app_settings_facade::AppSettingsFacade;
 mod state_explorer;
 use state_explorer::StateExplorer;
 mod state_explorer_facade;
