@@ -373,7 +373,16 @@
     }
 
     .submenu-title {
+      /* center, not baseline: an SVG icon has no real text baseline, so the
+         browser treats its bottom edge as its baseline, which pulls the
+         text down to line up with the icon's bottom instead of its middle. */
       @apply inline-flex flex-row items-center gap-x-1;
+      /* a "normal" line-height pads the text's box asymmetrically above and
+         below the glyphs, so even centered-by-box text can still look a
+         couple pixels off from the icon's true center; tightening it to 1
+         makes the text's box hug its glyphs, for a much closer visual
+         center match. */
+      line-height: 1;
       /* breathing room before the arrow column, so it never sits flush
          against (or reads as part of) the title's own content. */
       margin-right: 12px;
@@ -403,17 +412,22 @@
   }
 
   .action-trigger {
-    @apply flex items-center gap-x-1;
+    /* baseline, not center: the counter and name are different font sizes,
+       so centering their boxes leaves the two text baselines a few pixels
+       apart. */
+    @apply flex items-baseline gap-x-1;
   }
 
   .action-counter {
     /* matches the tree view's menu-xs font size (0.6875rem) */
     @apply whitespace-nowrap;
     font-size: 0.6875rem;
+    line-height: 1;
   }
 
   .action-name {
     @apply text-sm whitespace-nowrap;
+    line-height: 1;
   }
 
   .action-spacer {
@@ -439,11 +453,33 @@
   .ron-item {
     /* the daisyUI menu row provides gap/centering only between its own
        direct children; this wraps an icon+text pair as one child, so it
-       needs to replicate that layout itself. */
+       needs to replicate that layout itself. center, not baseline: an SVG
+       icon has no real text baseline, so the browser treats its bottom
+       edge as its baseline, which pulls the text down to line up with the
+       icon's bottom instead of its middle. */
     @apply inline-flex flex-row items-center gap-x-1;
-    /* breathing room so a right-aligned value never reads as sharing a
-       column with a SubMenu row's expand/collapse arrow. */
+    /* a "normal" line-height pads the text's box asymmetrically above and
+       below the glyphs, so even centered-by-box text can still look a
+       couple pixels off from the icon's true center; tightening it to 1
+       makes the text's box hug its glyphs, for a much closer visual
+       center match. */
+    line-height: 1;
+  }
+
+  /* breathing room so a right-aligned value never reads as sharing a
+     column with a SubMenu row's expand/collapse arrow. Scoped to the last
+     .ron-item on a line (e.g. a map-kv-pair's value, not its key) so rows
+     with more than one .ron-item don't get an unwanted gap in the middle. */
+  .ron-item:last-child {
     margin-right: 12px;
+  }
+
+  /* .submenu-title already has its own margin-right for the same reason;
+     when a title embeds a .ron-item (e.g. a "Map key" title showing the
+     key's value), the two stack, doubling the gap in front of anything
+     that follows within the title (like the changed-indicator dot). */
+  .submenu-title .ron-item:last-child {
+    margin-right: 0;
   }
 
   .ron-added {
