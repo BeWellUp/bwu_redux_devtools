@@ -399,7 +399,7 @@ dependencies = [
 
 [[package]]
 name = "bwu_redux_devtools"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "archery",
  "axum",
