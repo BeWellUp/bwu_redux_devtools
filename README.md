@@ -7,6 +7,11 @@ Connected apps stream every dispatched action and the resulting state to the
 DevTools server; the GUI shows the action history per app and lets you inspect
 any recorded state as a collapsible tree, JSON, or RON.
 
+The Tree view color-codes what changed since the previous action (added,
+removed, changed), with a toggle to hide everything that didn't change:
+
+![Tree view color-coding added, removed, and changed state between actions](docs/diff-coloring-demo.gif)
+
 ## Installation
 
 The crate is not yet on crates.io (it depends on the official Dioxus
@@ -40,6 +45,26 @@ let config = StoreConfig::new(initial_state, reducer)
 Start the DevTools GUI, then your app; it appears in the sidebar and its
 action history fills in live.
 
+## MCP interface
+
+With the `mcp` feature, the same server (desktop-embedded or standalone) also
+serves an [MCP](https://modelcontextprotocol.io/) Streamable HTTP endpoint at
+`/mcp` on its usual port — no separate binary or process. This lets an AI
+agent (e.g. Claude Code) inspect a connected app's live Redux state directly,
+without going through the GUI:
+
+- `list_apps` — connected app IDs and names
+- `get_history` — an app's buffered action/state history, optionally limited to the last N entries
+- `get_current_state` — an app's most recent state (RON)
+- `set_pause` — stop forwarding actions by name prefix (same mechanism as the GUI's snooze icon)
+
+Build with the feature enabled, e.g. `cargo install ... --bin
+bwu_redux_devtools_server --features standalone-server,mcp`, then register it
+as an HTTP-type MCP server pointing at `http://localhost:49051/mcp` (adjust
+the port to match `BWU_REDUX_DEVTOOLS_ADDR`). Since this connects to an
+already-running server rather than spawning one, the DevTools server needs to
+be up before the MCP tools will work.
+
 ## Running from source
 
 ```bash
@@ -65,6 +90,7 @@ to `http://localhost:49051` during development.
 | `redux_devtools` | via others | gRPC client types from `bwu_redux` |
 | `redux_devtools_server` | via `desktop` | The embedded Tonic gRPC server |
 | `standalone-server` | no | The headless `bwu_redux_devtools_server` binary |
+| `mcp` | no | Exposes an MCP interface alongside gRPC (see below); combine with `desktop` or `standalone-server` |
 | `tokio-console` | no | tokio-console layer for the standalone server (needs `RUSTFLAGS="--cfg tokio_unstable"`) |
 
 ## Theming

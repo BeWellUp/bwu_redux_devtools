@@ -106,6 +106,28 @@ impl WatchHub {
         }
     }
 
+    /// Currently buffered apps, as `(app_id, app_name)` pairs.
+    #[cfg(feature = "mcp")]
+    pub(crate) fn apps(&self) -> Vec<(Uuid, String)> {
+        let inner = self.inner.lock().unwrap_or_else(PoisonError::into_inner);
+        inner
+            .buffer
+            .iter()
+            .map(|(&app_id, app_buffer)| (app_id, app_buffer.app_name.clone()))
+            .collect()
+    }
+
+    /// Buffered history for `app_id`, most recent last; `None` if the app
+    /// isn't known (no `StateChange` received for it yet).
+    #[cfg(feature = "mcp")]
+    pub(crate) fn history(&self, app_id: Uuid) -> Option<Vec<StateChangeMessage>> {
+        let inner = self.inner.lock().unwrap_or_else(PoisonError::into_inner);
+        inner
+            .buffer
+            .get(&app_id)
+            .map(|app_buffer| app_buffer.changes.iter().cloned().collect())
+    }
+
     /// Subscribe to live changes and get the buffered history for replay.
     ///
     /// Both the snapshot and the subscription happen under the same lock as

@@ -1,6 +1,6 @@
 [package]
 name = "bwu_redux_devtools"
-version = "0.2.1"
+version = "0.2.0"
 authors = ["Guenter Zoechbauer <guenter@zoechbauer.net>"]
 edition = "2024"
 rust-version = "1.88"
@@ -15,6 +15,7 @@ exclude = ["CLAUDE.md"]
 
 [dependencies]
 archery = "1"
+axum = { version = "0.8", default-features = false, features = ["tokio", "http1", "http2"], optional = true }
 bwu_redux = { version = "0.2.0", default-features = false }
 console-subscriber = { version = "0.5", optional = true }
 dioxus = { version = "0.7.9", features = ["router"] }
@@ -29,8 +30,16 @@ gloo-storage = { version = "0.4", optional = true }
 http = "1"
 prost = "0.14"
 regex = "1"
+rmcp = { version = "2.0", default-features = false, features = [
+  "macros",
+  "server",
+  "transport-io",
+  "transport-streamable-http-server",
+  "schemars",
+], optional = true }
 ron = { version = "0.12", default-features = false }
 rpds = "1"
+schemars = { version = "1", optional = true }
 serde = { version = "1", features = ["derive", "rc"], optional = true }
 serde_json = "1"
 thiserror = "2"
@@ -101,6 +110,16 @@ standalone-server = [
   "redux_devtools_server",
   "dep:tracing-subscriber",
   "tokio/rt-multi-thread",
+]
+# Exposes an MCP interface (list_apps/get_history/get_current_state/set_pause)
+# alongside the gRPC/gRPC-web endpoints, on the same port. Combine with either
+# `desktop` or `standalone-server` — both already embed `DevtoolsServer`.
+mcp = [
+  "redux_devtools_server",
+  "dep:axum",
+  "dep:rmcp",
+  "dep:schemars",
+  "tokio/net",
 ]
 # tokio-console support for the standalone server; additionally requires
 # RUSTFLAGS="--cfg tokio_unstable"
