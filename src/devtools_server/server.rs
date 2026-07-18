@@ -15,7 +15,9 @@ use futures::{Stream, StreamExt as _};
 use http::HeaderName;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_stream::wrappers::{BroadcastStream, errors::BroadcastStreamRecvError};
-use tonic::{Request, Response, Status, transport::Server};
+#[cfg(not(feature = "mcp"))]
+use tonic::transport::Server;
+use tonic::{Request, Response, Status};
 use tonic_web::GrpcWebLayer;
 use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer, ExposeHeaders};
 use uuid::Uuid;
@@ -206,14 +208,7 @@ impl DevtoolsServer {
         let devtools_service: DevToolsService =
             DevToolsService::new(self.dispatch_tx.clone(), Arc::clone(&self.hub));
         info!("DevtoolsServer listening on {addr}");
-        if let Err(error) = Server::builder()
-            .accept_http1(true)
-            .layer(GRPC_WEB_CORS.get_or_init(init_grpc_web_cors))
-            .layer(GrpcWebLayer::new())
-            .add_service(DevToolsServer::new(devtools_service))
-            .serve(addr)
-            .await
-        {
+        if let Err(error) = Self::serve(addr, devtools_service, Arc::clone(&self.hub)).await {
             if let Some(ref dispatch_tx) = self.dispatch_tx {
                 let _ = dispatch_tx.send(Action::StateUpdateFailure {
                     error: error.to_string(),
@@ -223,10 +218,59 @@ impl DevtoolsServer {
                 "Running DevtoolsServer failed (a standalone server \u{2014} e.g. the devenv \
                  `redux-devtools` process \u{2014} may already be listening on {addr}): {error:?}"
             );
-            Err(Arc::new(error))
+            Err(Arc::from(error))
         } else {
             info!("DevtoolsServer stopped");
             Ok(())
         }
+    }
+
+    #[cfg(not(feature = "mcp"))]
+    async fn serve(
+        addr: SocketAddr,
+        devtools_service: DevToolsService,
+        _hub: Arc<WatchHub>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        Server::builder()
+            .accept_http1(true)
+            .layer(GRPC_WEB_CORS.get_or_init(init_grpc_web_cors))
+            .layer(GrpcWebLayer::new())
+            .add_service(DevToolsServer::new(devtools_service))
+            .serve(addr)
+            .await
+            .map_err(Into::into)
+    }
+
+    /// Same gRPC/gRPC-web endpoints as the non-`mcp` build, converted to an
+    /// `axum::Router` (`tonic::service::Routes::into_axum_router`) so an MCP
+    /// Streamable HTTP service can be mounted at `/mcp` on the same port.
+    /// `axum::serve` auto-negotiates HTTP/1.1 (grpc-web, browsers) and h2c
+    /// (native gRPC clients) per connection, so this needs no equivalent of
+    /// `accept_http1(true)`.
+    #[cfg(feature = "mcp")]
+    async fn serve(
+        addr: SocketAddr,
+        devtools_service: DevToolsService,
+        hub: Arc<WatchHub>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use rmcp::transport::streamable_http_server::{
+            StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
+        };
+
+        let router = tonic::service::Routes::new(DevToolsServer::new(devtools_service))
+            .into_axum_router()
+            .layer(GRPC_WEB_CORS.get_or_init(init_grpc_web_cors).clone())
+            .layer(GrpcWebLayer::new())
+            .route_service(
+                "/mcp",
+                StreamableHttpService::new(
+                    move || Ok(super::mcp::DevToolsMcp::new(Arc::clone(&hub))),
+                    Arc::new(LocalSessionManager::default()),
+                    StreamableHttpServerConfig::default(),
+                ),
+            );
+
+        let listener = tokio::net::TcpListener::bind(addr).await?;
+        axum::serve(listener, router).await.map_err(Into::into)
     }
 }
