@@ -510,6 +510,68 @@
     @apply text-sm;
   }
 
+  .state-explorer-render-area {
+    /* Intentionally not w-full: this needs to keep shrinking to its
+       content's natural width (like its children used to as direct flex
+       items of .state-explorer-body) so wide content still overflows into
+       that ancestor's horizontal scrollbar instead of being clipped. */
+  }
+
+  /* Sticky within .state-explorer-body (the scrolling viewport), sized to
+     match its fixed height, so this centers over the *visible* viewport
+     regardless of scroll position or how tall/wide the actual content
+     grows — an absolutely-positioned overlay sized against the content box
+     itself would center off-screen for exactly the huge-content case this
+     is meant to cover. The negative margin cancels its own footprint (flex
+     items don't margin-collapse, but negative margins still pull the next
+     sibling up/over it) so it doesn't add extra scrollable space. */
+  .render-spinner-anchor {
+    /* .state-explorer-body's align-items: flex-start means flex items size
+       to their own content instead of stretching to the row's width; this
+       needs the full width so justify-content: center actually centers
+       within the visible viewport instead of this item's own content. */
+    width: 100%;
+    position: sticky;
+    top: 0;
+    height: calc(100dvh - 6em);
+    /* Without this, .state-explorer-body's definite height plus its much
+       taller sibling (.state-explorer-render-area) makes the flexbox
+       shrink algorithm compress this item toward its own min-content size
+       (just the small badge) instead of honoring the height above. */
+    flex-shrink: 0;
+    margin-bottom: calc(-1 * (100dvh - 6em));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .render-spinner-overlay {
+    @apply rounded-box;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    color: var(--color-primary-content);
+    background-color: var(--color-primary);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transition: opacity 0s 0s;
+  }
+
+  /* Delayed appearance, instant disappearance: this transition is
+     committed to the compositor before the heavy synchronous tree render
+     starts (see the `Delay::new(0)` yields in state_explorer.rs), so it
+     keeps ticking on its own thread even while that render blocks the
+     main thread. A render that finishes under 300ms never becomes
+     visible; a slower one fades in without needing a JS/Rust timer to
+     "notice" the slowness from a blocked thread. */
+  .render-spinner-overlay.active {
+    opacity: 1;
+    transition: opacity 0s 300ms;
+  }
+
   svg.icon {
     @apply size-4;
   }

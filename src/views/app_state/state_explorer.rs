@@ -1,3 +1,6 @@
+#[cfg(not(feature = "web"))]
+use std::time::Duration;
+
 use bwu_redux_devtools::redux::{
     StateViewer, Store,
     ron_diff::{self, DiffNode, DiffStatus},
@@ -5,6 +8,8 @@ use bwu_redux_devtools::redux::{
 use dioxus::prelude::*;
 use dioxus_free_icons::Icon;
 use futures::StreamExt as _;
+#[cfg(not(feature = "web"))]
+use futures_timer::Delay;
 
 use super::StateExplorerFacade;
 use crate::components::{
@@ -13,6 +18,44 @@ use crate::components::{
     icons,
 };
 
+/// Waits for the browser to have actually painted whatever DOM/style
+/// changes are currently pending, before returning.
+///
+/// A bare `setTimeout`/[`Delay`] offers no such guarantee: it can resolve
+/// before the browser's rendering pipeline (style → layout → paint →
+/// compositor commit) has run even once, especially for a 0ms delay. That
+/// matters here because [`StateExplorer`] relies on the spinner overlay's
+/// CSS opacity transition being committed to the compositor *before* the
+/// heavy synchronous tree render blocks the main thread — only a
+/// compositor-driven transition keeps progressing while JS is blocked.
+/// Waiting for two consecutive animation frames is the standard technique
+/// to guarantee a real paint happened: the first frame confirms the
+/// browser is about to render pending changes, the second only fires once
+/// that render has completed.
+#[cfg(feature = "web")]
+#[allow(
+    clippy::future_not_send,
+    reason = "wasm32 is single-threaded; gloo_render::AnimationFrame held across the await is fine"
+)]
+async fn yield_for_paint() {
+    for _ in 0..2 {
+        let (tx, rx) = futures::channel::oneshot::channel();
+        let frame = gloo_render::request_animation_frame(move |_time| {
+            let _ = tx.send(());
+        });
+        let _ = rx.await;
+        drop(frame);
+    }
+}
+
+/// Desktop has no browser rendering pipeline to synchronize with here (no
+/// `web_sys::window`); fall back to the same single-tick yield used
+/// elsewhere in this crate.
+#[cfg(not(feature = "web"))]
+async fn yield_for_paint() {
+    Delay::new(Duration::from_millis(0)).await;
+}
+
 fn diff_status_class(status: DiffStatus) -> &'static str {
     match status {
         DiffStatus::Unchanged => "",
@@ -20,6 +63,24 @@ fn diff_status_class(status: DiffStatus) -> &'static str {
         DiffStatus::Removed => "ron-removed",
         DiffStatus::Changed => "ron-changed",
     }
+}
+
+/// Everything the (potentially expensive) viewer render depends on, bundled
+/// so it can be snapshotted as one unit and compared by equality. See
+/// [`StateExplorer`] for how this is used to delay showing the heavy tree
+/// by one frame behind a spinner.
+#[derive(Clone, Default, PartialEq)]
+struct ExplorerContent {
+    viewer: StateViewer,
+    action_name: Option<String>,
+    action_ron_value: Option<ron::Value>,
+    state_ron_value: Option<ron::Value>,
+    previous_state_ron_value: Option<ron::Value>,
+    hide_unchanged: bool,
+    action_json_pretty: Option<String>,
+    state_json_pretty: Option<String>,
+    action_ron_pretty: Option<String>,
+    state_ron_pretty: Option<String>,
 }
 
 #[component]
@@ -74,10 +135,6 @@ pub(crate) fn StateExplorer() -> Element {
 
     let mut hide_unchanged: Signal<bool> = use_signal(|| false);
 
-    let state_diff = use_memo(move || {
-        state_ron_value().map(|value| ron_diff::diff(previous_state_ron_value().as_ref(), &value))
-    });
-
     let mut action_ron_pretty: Signal<Option<String>> = use_signal(|| None);
     let _ = use_resource(move || async move {
         let mut stream = facade.read().get_selected_action_ron_pretty();
@@ -114,10 +171,87 @@ pub(crate) fn StateExplorer() -> Element {
         }
     });
 
-    match state_viewer() {
+    // Bundles every input the (potentially very expensive) viewer render
+    // below depends on. `rendered_content` lags one frame behind `content`
+    // (see the resource below) so the spinner overlay actually gets painted
+    // before the heavy synchronous render starts; `ExplorerViewer` takes the
+    // snapshot as a prop so it re-renders only when the content itself
+    // changes, not on every `is_rendering` toggle.
+    let content = use_memo(move || ExplorerContent {
+        viewer: state_viewer(),
+        action_name: action_name(),
+        action_ron_value: action_ron_value(),
+        state_ron_value: state_ron_value(),
+        previous_state_ron_value: previous_state_ron_value(),
+        hide_unchanged: hide_unchanged(),
+        action_json_pretty: action_json_pretty(),
+        state_json_pretty: state_json_pretty(),
+        action_ron_pretty: action_ron_pretty(),
+        state_ron_pretty: state_ron_pretty(),
+    });
+
+    let mut rendered_content = use_signal(ExplorerContent::default);
+    let mut is_rendering = use_signal(|| false);
+
+    let _ = use_resource(move || {
+        let next = content();
+        async move {
+            // Yield before the *first* `is_rendering.set(true)` too: on a
+            // fresh mount (e.g. switching back from the Settings tab, which
+            // unmounts this whole component), setting it true in the same
+            // synchronous pass as the initial mount means the overlay's
+            // very first painted frame already has the `active` class —
+            // CSS transitions don't animate a value that never had a prior
+            // painted frame to transition from, so it would appear
+            // instantly instead of after the delay.
+            yield_for_paint().await;
+            is_rendering.set(true);
+            // Yield again so the browser paints the spinner overlay
+            // (invisible until CSS's `transition-delay` elapses) *before*
+            // the heavy, synchronous tree render below blocks the main
+            // thread. A JS/Rust timer can't fire "during" that block since
+            // this is single-threaded, but a composited CSS opacity
+            // transition keeps ticking regardless — see `.render-spinner-overlay`
+            // in input.css.
+            yield_for_paint().await;
+            rendered_content.set(next);
+            // And yield once more before clearing the flag: `set` only
+            // marks `ExplorerViewer` dirty, it doesn't run its (expensive)
+            // render synchronously. Without this yield, both this write and
+            // the one above land in the same reconciliation pass, so the
+            // heavy render happens *after* is_rendering is already false
+            // and the spinner never gets a chance to stay up during it.
+            yield_for_paint().await;
+            is_rendering.set(false);
+        }
+    });
+
+    rsx! {
+        div { class: "render-spinner-anchor",
+            div {
+                class: if is_rendering() { "render-spinner-overlay active" } else { "render-spinner-overlay" },
+                span { class: "loading loading-spinner loading-lg" }
+            }
+        }
+        div { class: "state-explorer-render-area",
+            ExplorerViewer {
+                content: rendered_content(),
+                on_hide_unchanged_change: move |value| hide_unchanged.set(value),
+            }
+        }
+    }
+}
+
+#[component]
+fn ExplorerViewer(content: ExplorerContent, on_hide_unchanged_change: Callback<bool>) -> Element {
+    match content.viewer {
         StateViewer::Tree => {
-            if let (Some(action_value), Some(state_value)) = (action_ron_value(), state_ron_value())
+            if let (Some(action_value), Some(state_value)) =
+                (content.action_ron_value, content.state_ron_value)
             {
+                let state_diff =
+                    ron_diff::diff(content.previous_state_ron_value.as_ref(), &state_value);
+
                 rsx! {
                     Menu {
                         menu_size: MenuSize::XS,
@@ -128,7 +262,7 @@ pub(crate) fn StateExplorer() -> Element {
                                 IconTooltip { text: "Map or struct",
                                     Icon { class: "icon", icon: icons::Map {} }
                                 }
-                                "{action_name().unwrap_or_default()}"
+                                "{content.action_name.clone().unwrap_or_default()}"
                             },
                             StateValueRon { value: action_value }
                         }
@@ -138,8 +272,8 @@ pub(crate) fn StateExplorer() -> Element {
                         input {
                             r#type: "checkbox",
                             class: "checkbox checkbox-xs",
-                            checked: hide_unchanged(),
-                            onchange: move |evt| hide_unchanged.set(evt.checked()),
+                            checked: content.hide_unchanged,
+                            onchange: move |evt| on_hide_unchanged_change.call(evt.checked()),
                         }
                         "Hide unchanged"
                     }
@@ -153,14 +287,14 @@ pub(crate) fn StateExplorer() -> Element {
                                     Icon { class: "icon", icon: icons::Map {} }
                                 }
                                 "State"
-                                if state_diff().is_some_and(|diff| diff.has_changes()) {
+                                if state_diff.has_changes() {
                                     span { class: "ron-changed-indicator", "●" }
                                 }
                             },
                             StateValueRon {
                                 value: state_value,
-                                diff: state_diff(),
-                                hide_unchanged: hide_unchanged(),
+                                diff: Some(state_diff),
+                                hide_unchanged: content.hide_unchanged,
                             }
                         }
                     }
@@ -172,20 +306,20 @@ pub(crate) fn StateExplorer() -> Element {
         StateViewer::Json => {
             rsx! {
                 pre { class: "state-code-block",
-                    "{action_json_pretty().unwrap_or_default()}"
+                    "{content.action_json_pretty.clone().unwrap_or_default()}"
                 }
                 pre { class: "state-code-block",
-                    "{state_json_pretty().unwrap_or_default()}"
+                    "{content.state_json_pretty.clone().unwrap_or_default()}"
                 }
             }
         }
         StateViewer::Ron => {
             rsx! {
                 pre { class: "state-code-block",
-                    "{action_ron_pretty().unwrap_or_default()}"
+                    "{content.action_ron_pretty.clone().unwrap_or_default()}"
                 }
                 pre { class: "state-code-block",
-                    "{state_ron_pretty().unwrap_or_default()}"
+                    "{content.state_ron_pretty.clone().unwrap_or_default()}"
                 }
             }
         }

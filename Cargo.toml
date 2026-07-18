@@ -26,6 +26,7 @@ dioxus-primitives = { git = "https://github.com/DioxusLabs/components", rev = "b
 futures = "0.3"
 futures-timer = { version = "3", default-features = false }
 getrandom = { version = "0.4", optional = true }
+gloo-render = { version = "0.3", optional = true }
 gloo-storage = { version = "0.4", optional = true }
 http = "1"
 prost = "0.14"
@@ -76,6 +77,7 @@ pretty_assertions = "1"
 # to run for web use dx serve --platform web --no-default-features --features web
 default = ["desktop"]
 web = [
+  "dep:gloo-render",
   "dep:gloo-storage",
   "dep:tonic-web-wasm-client",
   "dioxus-primitives/web",
