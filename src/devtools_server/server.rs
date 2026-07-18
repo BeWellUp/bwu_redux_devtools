@@ -257,10 +257,16 @@ impl DevtoolsServer {
             StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
         };
 
+        // Layer order matters: axum makes the *last* `.layer()` outermost,
+        // the reverse of tonic's `Server::builder()` in the non-`mcp` path.
+        // CORS must be outermost — `GrpcWebLayer` answers any non-grpc-web
+        // HTTP/1.1 request (including CORS preflight OPTIONS) with a bare
+        // 400, so with CORS inside it browsers never get preflight approval
+        // and block every grpc-web call.
         let router = tonic::service::Routes::new(DevToolsServer::new(devtools_service))
             .into_axum_router()
-            .layer(GRPC_WEB_CORS.get_or_init(init_grpc_web_cors).clone())
             .layer(GrpcWebLayer::new())
+            .layer(GRPC_WEB_CORS.get_or_init(init_grpc_web_cors).clone())
             .route_service(
                 "/mcp",
                 StreamableHttpService::new(
