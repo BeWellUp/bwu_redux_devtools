@@ -29,6 +29,22 @@ pub(crate) fn HomeView() -> Element {
 
     let app_names = facade.read().get_app_names();
 
+    // Auto-select the first app to ever connect: `selected_app_id` only ever
+    // transitions None -> Some once (see the reducer's `.or(...)` on
+    // `Action::StateUpdate`), so navigate there the moment that happens,
+    // unless the user has already navigated somewhere else in the meantime.
+    let selected_app_id = facade.read().get_selected_app_id();
+    let current_route = full_route.clone();
+    let _ = use_effect(move || {
+        if let Some(app_id) = selected_app_id()
+            && current_route == Route::NoAppSelected
+        {
+            let _ = nav.push(Route::AppStateView {
+                app_id: app_id.to_string(),
+            });
+        }
+    });
+
     let access_keys = HashMap::from([
         (0, "a"),
         (1, "b"),
