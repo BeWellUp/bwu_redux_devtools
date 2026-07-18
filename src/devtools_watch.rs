@@ -16,6 +16,14 @@ const INITIAL_RETRY_DELAY: Duration = Duration::from_secs(1);
 /// Maximum backoff delay between reconnection attempts.
 const MAX_RETRY_DELAY: Duration = Duration::from_secs(60);
 
+/// tonic's default max decoded gRPC message size is 4 MiB, easily exceeded
+/// by a `Watch` replay batch (up to 200 buffered changes per app, each
+/// carrying a full RON-serialized state snapshot) for apps with a
+/// non-trivial state tree. Without this override the stream fails
+/// immediately on every (re)connect attempt with "message length too
+/// large", so the GUI never receives any data at all.
+const MAX_DECODED_MESSAGE_SIZE: usize = 64 * 1024 * 1024;
+
 /// Devtools server URL used when the page is served directly by `dx serve`
 /// (no reverse proxy in front). The server's CORS is fully open, so the
 /// cross-origin gRPC-web connection works.
@@ -88,7 +96,8 @@ async fn watch(
     max_seen: &mut HashMap<String, u32>,
     dispatch_tx: &UnboundedSender<Action>,
 ) -> Result<(), tonic::Status> {
-    let mut client = DevToolsClient::new(tonic_web_wasm_client::Client::new(url.to_owned()));
+    let mut client = DevToolsClient::new(tonic_web_wasm_client::Client::new(url.to_owned()))
+        .max_decoding_message_size(MAX_DECODED_MESSAGE_SIZE);
     let mut stream = client.watch(WatchRequest {}).await?.into_inner();
 
     while let Some(msg) = stream.message().await? {
