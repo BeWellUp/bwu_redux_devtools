@@ -2663,6 +2663,7 @@
       flex-direction: row;
       align-items: center;
       column-gap: var(--spacing);
+      line-height: 1;
       margin-right: 12px;
     }
   }
@@ -2684,17 +2685,19 @@
   }
   .action-trigger {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     column-gap: var(--spacing);
   }
   .action-counter {
     white-space: nowrap;
     font-size: 0.6875rem;
+    line-height: 1;
   }
   .action-name {
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
     white-space: nowrap;
+    line-height: 1;
   }
   .action-spacer {
     flex-grow: 1;
@@ -2864,7 +2867,13 @@
     flex-direction: row;
     align-items: center;
     column-gap: var(--spacing);
+    line-height: 1;
+  }
+  .ron-item:last-child {
     margin-right: 12px;
+  }
+  .submenu-title .ron-item:last-child {
+    margin-right: 0;
   }
   .ron-added {
     border-radius: var(--radius-field);
