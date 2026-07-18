@@ -28,6 +28,28 @@ pub(crate) fn StatesList() -> Element {
         }
     });
 
+    // Selection state is subscribed once here and handed to the rows as plain
+    // props. Rows must not subscribe per-instance: the virtual list keys rows
+    // by index, so a row component outlives any particular item and a stream
+    // started inside it would compare against a stale captured counter.
+    let mut selected_counter: Signal<Option<GlobalCounter>> = use_signal(|| None);
+    let _ = use_resource(move || async move {
+        let mut stream = facade.read().get_selected_change();
+
+        while let Some(value) = stream.next().await {
+            selected_counter.set(value.map(|c| c.counter));
+        }
+    });
+
+    let mut app_id: Signal<Option<AppId>> = use_signal(|| None);
+    let _ = use_resource(move || async move {
+        let mut stream = facade.read().get_selected_app_id();
+
+        while let Some(value) = stream.next().await {
+            app_id.set(value);
+        }
+    });
+
     // Subscribe this component to `items` so every history change re-renders
     // the list with a fresh `render_item` closure.
     let _ = items();
@@ -42,13 +64,17 @@ pub(crate) fn StatesList() -> Element {
                     count,
                     render_item: move |idx: usize| {
                         let item = items.read().get(idx).copied();
-                        match item {
-                            Some(item) => rsx! {
+                        match (item, app_id()) {
+                            (Some(item), Some(app_id)) => rsx! {
                                 div { class: "list-row block",
-                                    ActionListItem { item }
+                                    ActionListItem {
+                                        item,
+                                        app_id,
+                                        is_selected: selected_counter() == Some(item),
+                                    }
                                 }
                             },
-                            None => rsx! {},
+                            _ => rsx! {},
                         }
                     },
                 }
@@ -60,6 +86,8 @@ pub(crate) fn StatesList() -> Element {
 #[derive(Props, Clone, Debug, PartialEq)]
 struct ActionListItemProps {
     item: GlobalCounter,
+    app_id: AppId,
+    is_selected: bool,
 }
 
 #[component]
@@ -70,32 +98,14 @@ pub(crate) fn ActionListItem(props: ActionListItemProps) -> Element {
     let action_prefix = facade.read().get_action_prefix(props.item);
     let change = facade.read().get_change(props.item);
 
-    let mut app_id: Signal<Option<AppId>> = use_signal(|| None);
-    let _ = use_resource(move || async move {
-        let mut stream = facade.read().get_selected_app_id();
-
-        while let Some(value) = stream.next().await {
-            app_id.set(value);
-        }
-    });
-
-    let mut is_selected: Signal<bool> = use_signal(|| false);
-    let _ = use_resource(move || async move {
-        let mut stream = facade.read().get_selected_change();
-
-        while let Some(value) = stream.next().await {
-            is_selected.set(value.is_some_and(|c| c.counter == props.item));
-        }
-    });
-
     if let Some(action_name) = action_prefix
         && let Some(state) = change
-        && let Some(app_id) = app_id()
     {
+        let app_id = props.app_id;
         rsx! {
             div {
                 key: "{app_id}-{props.item}",
-                class: if is_selected() { "item-active" },
+                class: if props.is_selected { "item-active" },
                 class: "action-list-item",
                 onclick: move |_| {
                     let _ = store
