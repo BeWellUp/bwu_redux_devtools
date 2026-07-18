@@ -1,10 +1,6 @@
 use std::sync::Arc;
 
-use bwu_redux_devtools::redux::{
-    Action, Store,
-    app_id::AppId,
-    selectors::{stream_app_names, stream_selected_theme, stream_themes},
-};
+use bwu_redux_devtools::redux::{Action, Store, app_id::AppId, selectors::stream_app_names};
 use dioxus::{
     hooks::{use_resource, use_signal},
     prelude::*,
@@ -38,37 +34,5 @@ impl HomeViewFacade {
             }
         });
         app_names
-    }
-
-    pub(crate) fn get_themes(&self) -> Signal<Vec<String>> {
-        let mut themes: Signal<Vec<String>> = use_signal(|| vec![]);
-        let store = Arc::clone(&self.store);
-        let _ = use_resource(move || {
-            let store = Arc::clone(&store);
-            async move {
-                let mut stream = stream_themes(store);
-
-                while let Some(value) = stream.next().await {
-                    themes.set(value);
-                }
-            }
-        });
-        themes
-    }
-
-    pub(crate) fn get_selected_theme(&self) -> Signal<String> {
-        let mut selected_theme: Signal<String> = use_signal(|| String::from("default"));
-        let store = Arc::clone(&self.store);
-        let _ = use_resource(move || {
-            let store = Arc::clone(&store);
-            async move {
-                let mut stream = stream_selected_theme(store);
-
-                while let Some(value) = stream.next().await {
-                    selected_theme.set(value);
-                }
-            }
-        });
-        selected_theme
     }
 }

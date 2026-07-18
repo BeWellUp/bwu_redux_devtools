@@ -367,9 +367,9 @@ checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
 name = "bwu_redux"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16e181163f687020685d9e6fb58d552b6559e8bb8260324eddcc3f2f354ed927"
+checksum = "574c251ffdee5e73b471469fc1230d38e58ce6ebbeb26e4ed9aad8dca510a61d"
 dependencies = [
  "chrono",
  "futures",

@@ -217,13 +217,6 @@ pub fn select_selected_drop_history_on_reconnect(state: &State) -> bool {
         .is_some_and(|app_state| app_state.drop_history_on_reconnect)
 }
 
-pub fn select_selected_distinct_action_prefixes(state: &State) -> BTreeSet<String> {
-    select_selected_history(state)
-        .iter()
-        .map(|change| extract_action_prefix(&change.action))
-        .collect()
-}
-
 pub fn stream_selected_history_limit(store: Store) -> ChangesStream<usize> {
     store.changes(select_selected_history_limit)
 }
@@ -232,8 +225,16 @@ pub fn stream_selected_drop_history_on_reconnect(store: Store) -> ChangesStream<
     store.changes(select_selected_drop_history_on_reconnect)
 }
 
-pub fn stream_selected_distinct_action_prefixes(store: Store) -> ChangesStream<BTreeSet<String>> {
-    store.changes(select_selected_distinct_action_prefixes)
+pub fn select_selected_paused_actions(state: &State) -> BTreeSet<String> {
+    state
+        .selected_app_id
+        .and_then(|app_id| state.app_states.get(&app_id))
+        .map(|app_state| app_state.paused_actions.clone())
+        .unwrap_or_default()
+}
+
+pub fn stream_selected_paused_actions(store: Store) -> ChangesStream<BTreeSet<String>> {
+    store.changes(select_selected_paused_actions)
 }
 
 pub fn select_selected_theme(state: &State) -> String {

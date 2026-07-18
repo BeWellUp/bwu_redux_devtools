@@ -1,3 +1,5 @@
+#[cfg(target_family = "wasm")]
+use std::collections::BTreeSet;
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
 use std::{
@@ -23,7 +25,7 @@ use config::Config;
 #[cfg(not(target_family = "wasm"))]
 use directories::ProjectDirs;
 #[cfg(not(target_family = "wasm"))]
-use toml_edit::{DocumentMut, Item, Table};
+use toml_edit::{Array, DocumentMut, Item, Table, Value};
 
 #[cfg(target_family = "wasm")]
 const THEME_NAME_STOREAGE_KEY: &str = "bwu_redux_devtools::theme_name";
@@ -35,6 +37,7 @@ const DEFAULT_THEME_NAME: &str = "default";
 
 const HISTORY_LIMIT_FIELD: &str = "history-limit";
 const DROP_HISTORY_ON_RECONNECT_FIELD: &str = "drop-history-on-reconnect";
+const PAUSED_ACTIONS_FIELD: &str = "paused-actions";
 
 #[cfg(target_family = "wasm")]
 fn app_setting_key(app_id: AppId, field: &str) -> String {
@@ -142,6 +145,19 @@ impl Middleware<State, Action> for StorageMiddleware {
                             let _ =
                                 tx.send(Action::DropHistoryOnReconnectChange { app_id, enabled });
                         }
+                        // Re-send any persisted pause set to the server: its
+                        // in-memory pause state doesn't survive a server
+                        // restart, so a GUI's stated preference has to be
+                        // reasserted whenever the app (re)connects.
+                        if let Ok(paused_prefixes) = LocalStorage::get::<BTreeSet<String>>(
+                            app_setting_key(app_id, PAUSED_ACTIONS_FIELD),
+                        ) && !paused_prefixes.is_empty()
+                        {
+                            let _ = tx.send(Action::PauseActionsChange {
+                                app_id,
+                                paused_prefixes,
+                            });
+                        }
                     }
                     #[cfg(not(target_family = "wasm"))]
                     {
@@ -159,6 +175,15 @@ impl Middleware<State, Action> for StorageMiddleware {
                             {
                                 let _ = tx
                                     .send(Action::DropHistoryOnReconnectChange { app_id, enabled });
+                            }
+                            if let Ok(paused_prefixes) = settings
+                                .get::<Vec<String>>(&app_setting_key(app_id, PAUSED_ACTIONS_FIELD))
+                                && !paused_prefixes.is_empty()
+                            {
+                                let _ = tx.send(Action::PauseActionsChange {
+                                    app_id,
+                                    paused_prefixes: paused_prefixes.into_iter().collect(),
+                                });
                             }
                         }
                     }
@@ -193,6 +218,31 @@ impl Middleware<State, Action> for StorageMiddleware {
                     let _ = write_config_value(
                         &["apps", &app_id.to_string(), DROP_HISTORY_ON_RECONNECT_FIELD],
                         Item::from(enabled),
+                        &action,
+                    );
+                }
+            }
+
+            Action::PauseActionsChange {
+                app_id,
+                paused_prefixes,
+            } => {
+                #[cfg(target_family = "wasm")]
+                {
+                    let _ = LocalStorage::set(
+                        app_setting_key(app_id, PAUSED_ACTIONS_FIELD),
+                        &paused_prefixes,
+                    );
+                }
+                #[cfg(not(target_family = "wasm"))]
+                {
+                    let mut array = Array::new();
+                    for prefix in &paused_prefixes {
+                        array.push(prefix.as_str());
+                    }
+                    let _ = write_config_value(
+                        &["apps", &app_id.to_string(), PAUSED_ACTIONS_FIELD],
+                        Item::Value(Value::Array(array)),
                         &action,
                     );
                 }

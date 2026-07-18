@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
-use bwu_redux_devtools::redux::{Action, GlobalCounter, Store, app_id::AppId};
+use bwu_redux_devtools::redux::{
+    Action, GlobalCounter, Store, app_id::AppId, selectors::select_selected_paused_actions,
+};
 use dioxus::prelude::*;
+use dioxus_free_icons::{Icon, icons::ld_icons::LdFilterX};
 use dioxus_primitives::ContentSide;
 use futures::StreamExt as _;
 
@@ -102,13 +105,35 @@ pub(crate) fn ActionListItem(props: ActionListItemProps) -> Element {
                 },
                 Tooltip {
                     TooltipTrigger {
-                        span { class: "action-name", "({state.counter}, {state.session_counter}). {action_name}" }
+                        span { class: "action-name", "({state.counter}, {state.session_counter}) {action_name}" }
                     }
-                    TooltipContent { side: ContentSide::Right,
-                        "First: total events seen since the DevTools GUI started."
-                        br {}
-                        "Second: events in this app's current run (resets if the app restarts)."
+                    TooltipContent { side: ContentSide::Right, class: "nowrap",
+                        "Action counter (global, app run)"
                     }
+                }
+                span { class: "action-spacer" }
+                Tooltip {
+                    TooltipTrigger {
+                        class: "snooze-action-btn",
+                        "aria-label": "Pause {action_name}",
+                        span {
+                            onclick: {
+                                let store = store.clone();
+                                move |evt: Event<MouseData>| {
+                                    evt.stop_propagation();
+                                    let mut paused = store.select(select_selected_paused_actions);
+                                    let _ = paused.insert(action_name.clone());
+                                    let _ = store
+                                        .dispatch(Action::PauseActionsChange {
+                                            app_id,
+                                            paused_prefixes: paused,
+                                        });
+                                }
+                            },
+                            Icon { icon: LdFilterX }
+                        }
+                    }
+                    TooltipContent { side: ContentSide::Right, class: "nowrap", "Pause this action" }
                 }
             }
         }

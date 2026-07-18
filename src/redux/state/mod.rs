@@ -211,12 +211,15 @@ impl<const N: usize> From<ThemeNamesWrapper<N>> for VectorSync<String> {
 pub type Store = Arc<StoreWrapper<State, Action>>;
 pub type ChangesStream<T> = Pin<Box<dyn Stream<Item = T> + Send + 'static>>;
 
-pub fn create_store() -> Store {
+pub fn create_store(pause_sink: Arc<dyn super::PauseSink>) -> Store {
     let initial_state = State::default();
 
     Arc::new(StoreWrapper::new(
         StoreConfig::new(initial_state, super::reducer)
-            .with_middleware(vec![Arc::new(StorageMiddleware)])
+            .with_middleware(vec![
+                Arc::new(StorageMiddleware),
+                Arc::new(super::PauseMiddleware::new(pause_sink)),
+            ])
             .with_history_size(100)
             // On wasm the GUI is a devtools *viewer* (see `devtools_watch`);
             // sending its own state to the hard-coded devtools URL would be
@@ -245,7 +248,7 @@ mod tests {
 
     #[test]
     fn create_store_minimal() {
-        let x = create_store();
+        let x = create_store(Arc::new(super::super::NoopPauseSink));
         assert_eq!(x.select(std::clone::Clone::clone), State::default());
     }
 }

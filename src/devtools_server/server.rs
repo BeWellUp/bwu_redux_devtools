@@ -6,8 +6,8 @@ use std::{
 };
 
 use bwu_redux::devtools_rpc::{
-    ConnectionStatusRequest, ConnectionStatusResponse, StateChangeRequest, StateChangeResponse,
-    WatchRequest,
+    ConnectionStatusRequest, ConnectionStatusResponse, SetPauseRequest, SetPauseResponse,
+    StateChangeRequest, StateChangeResponse, WatchRequest,
     dev_tools_server::{DevTools, DevToolsServer},
 };
 use dioxus::logger::tracing::{error, info, warn};
@@ -53,12 +53,20 @@ impl DevTools for DevToolsService {
         let app_id = Uuid::parse_str(app_id.value.as_str())
             .map_err(|err| Status::invalid_argument(format!("invalid app_id UUID: {err}")))?;
 
-        self.hub.publish(app_id, &req);
-
+        // Ack every received counter regardless of pause filtering, so the
+        // monitored app's client sees a normal accept (no error, no retry)
+        // for actions that are simply not being forwarded right now.
         let counter = req.changes.iter().map(|v| v.counter).collect::<Vec<_>>();
+        let kept = self.hub.publish(app_id, &req);
 
-        if let Some(ref dispatch_tx) = self.dispatch_tx {
-            let action = Action::try_from(req).map_err(Status::invalid_argument)?;
+        if let Some(ref dispatch_tx) = self.dispatch_tx
+            && !kept.is_empty()
+        {
+            let filtered_req = StateChangeRequest {
+                changes: kept,
+                ..req
+            };
+            let action = Action::try_from(filtered_req).map_err(Status::invalid_argument)?;
             if let Err(err) = dispatch_tx.send(action) {
                 // TODO(zoechi): propagate error
                 error!("dispatching action StateUpdate failed: {err}");
@@ -75,6 +83,24 @@ impl DevTools for DevToolsService {
     ) -> Result<Response<ConnectionStatusResponse>, Status> {
         let reply = ConnectionStatusResponse { ok: true };
         Ok(Response::new(reply))
+    }
+
+    async fn set_pause(
+        &self,
+        request: Request<SetPauseRequest>,
+    ) -> Result<Response<SetPauseResponse>, Status> {
+        let req = request.into_inner();
+        let app_id = req
+            .app_id
+            .as_ref()
+            .ok_or_else(|| Status::invalid_argument("missing app_id"))?;
+        let app_id = Uuid::parse_str(app_id.value.as_str())
+            .map_err(|err| Status::invalid_argument(format!("invalid app_id UUID: {err}")))?;
+
+        self.hub
+            .set_pause(app_id, req.paused_action_prefixes.into_iter().collect());
+
+        Ok(Response::new(SetPauseResponse { ok: true }))
     }
 
     type WatchStream = Pin<Box<dyn Stream<Item = Result<StateChangeRequest, Status>> + Send>>;
@@ -150,6 +176,29 @@ impl DevtoolsServer {
             dispatch_tx,
             hub: Arc::new(WatchHub::new()),
         }
+    }
+
+    /// Returns a copy of `self` with `dispatch_tx` set, sharing the same
+    /// hub (and so the same pause state) as `self`. Lets desktop create a
+    /// pause-capable handle before the store (and thus its dispatch sender)
+    /// exists, then hand the fully-wired server to `run()` once it does.
+    #[must_use]
+    pub fn with_dispatch_tx(&self, dispatch_tx: UnboundedSender<Action>) -> Self {
+        Self {
+            dispatch_tx: Some(dispatch_tx),
+            hub: Arc::clone(&self.hub),
+        }
+    }
+
+    /// Direct in-process equivalent of the `SetPause` RPC, for a GUI that
+    /// embeds this server (desktop) and so doesn't need to round-trip
+    /// through gRPC to talk to itself.
+    pub fn set_pause(
+        &self,
+        app_id: uuid::Uuid,
+        paused_action_prefixes: std::collections::HashSet<String>,
+    ) {
+        self.hub.set_pause(app_id, paused_action_prefixes);
     }
 
     pub async fn run(&self) -> Result<(), Arc<dyn std::error::Error + Send + Sync>> {

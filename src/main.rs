@@ -1,11 +1,15 @@
+use std::sync::Arc;
+
 use bwu_redux_devtools::redux::{
     Action, ReduxStateChange, create_store, selectors::stream_selected_theme,
 };
 use dioxus::prelude::*;
 use futures::StreamExt as _;
+use pause_controller::PauseController;
 use route::Route;
 
 pub(crate) mod components;
+pub(crate) mod pause_controller;
 pub(crate) mod route;
 
 #[cfg(not(target_family = "wasm"))]
@@ -22,8 +26,22 @@ fn main() {
 
 #[component]
 fn App() -> Element {
-    let store = use_context_provider(|| {
-        let store = create_store();
+    // Created hub-first (no dispatch sender yet) so it can back the pause
+    // controller the store needs *during construction*; `.with_dispatch_tx`
+    // below hands the same hub a working sender once the store exists,
+    // without losing any pause state set on it in between.
+    #[cfg(not(target_family = "wasm"))]
+    let hub_server = use_hook(|| DevtoolsServer::new(None));
+    #[cfg(not(target_family = "wasm"))]
+    let hub_server_for_pause = hub_server.clone();
+
+    let store = use_context_provider(move || {
+        #[cfg(not(target_family = "wasm"))]
+        let pause_controller = PauseController::embedded(hub_server_for_pause);
+        #[cfg(target_family = "wasm")]
+        let pause_controller = PauseController::remote();
+
+        let store = create_store(Arc::new(pause_controller));
         store.run();
         store
     });
@@ -56,9 +74,8 @@ fn App() -> Element {
     let dispatch_sender = store.get_dispatch_sender();
     #[cfg(not(target_family = "wasm"))]
     let _devtools_server_future = use_future(move || {
-        let dispatch_sender = dispatch_sender.clone();
+        let server = hub_server.with_dispatch_tx(dispatch_sender.clone());
         async move {
-            let server = DevtoolsServer::new(Some(dispatch_sender.clone()));
             let _ = server.run().await;
         }
     });

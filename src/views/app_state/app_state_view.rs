@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use dioxus_free_icons::{Icon, icons::ld_icons::LdSettings};
 use futures::StreamExt as _;
 
-use super::{AppSettingsDialog, AppStateViewFacade, StateExplorer, StatesList};
+use super::{AppSettingsPage, AppStateViewFacade, StateExplorer, StatesList};
 use crate::{
     components::tabs::{TabList, TabTrigger, Tabs},
     route::Route,
@@ -12,6 +12,7 @@ use crate::{
 const TAB_TREE: &str = "tree";
 const TAB_JSON: &str = "json";
 const TAB_RON: &str = "ron";
+const TAB_SETTINGS: &str = "settings";
 
 const fn viewer_tab_value(viewer: StateViewer) -> &'static str {
     match viewer {
@@ -67,7 +68,7 @@ pub fn AppStateView(app_id: String) -> Element {
         }
     });
 
-    let mut settings_open = use_signal(|| false);
+    let mut settings_tab_active = use_signal(|| false);
 
     rsx! {
         document::Title { "{selected_app_name} - BWU Redux" }
@@ -77,33 +78,47 @@ pub fn AppStateView(app_id: String) -> Element {
             div { class: "state-explorer",
                 div { class: "state-explorer-tabbar",
                     Tabs {
-                        value: use_memo(move || Some(viewer_tab_value(state_viewer()).to_owned())),
+                        value: use_memo(move || Some(
+                            if settings_tab_active() {
+                                TAB_SETTINGS.to_owned()
+                            } else {
+                                viewer_tab_value(state_viewer()).to_owned()
+                            },
+                        )),
                         on_value_change: move |value: String| {
-                            let viewer = match value.as_str() {
-                                TAB_JSON => StateViewer::Json,
-                                TAB_RON => StateViewer::Ron,
-                                _ => StateViewer::Tree,
-                            };
-                            facade.read().dispatch(Action::StateViewerChange(viewer));
+                            if value == TAB_SETTINGS {
+                                settings_tab_active.set(true);
+                            } else {
+                                settings_tab_active.set(false);
+                                let viewer = match value.as_str() {
+                                    TAB_JSON => StateViewer::Json,
+                                    TAB_RON => StateViewer::Ron,
+                                    _ => StateViewer::Tree,
+                                };
+                                facade.read().dispatch(Action::StateViewerChange(viewer));
+                            }
                         },
                         TabList {
                             TabTrigger { value: TAB_TREE, index: 0_usize, "Tree" }
                             TabTrigger { value: TAB_JSON, index: 1_usize, "JSON" }
                             TabTrigger { value: TAB_RON, index: 2_usize, "Ron" }
+                            TabTrigger {
+                                value: TAB_SETTINGS,
+                                index: 3_usize,
+                                "aria-label": "Settings",
+                                Icon { icon: LdSettings }
+                            }
                         }
-                    }
-                    if let Some(app_id) = selected_app_id() {
-                        button {
-                            class: "btn btn-ghost btn-sm btn-circle",
-                            "aria-label": "App settings",
-                            onclick: move |_| settings_open.set(true),
-                            Icon { icon: LdSettings }
-                        }
-                        AppSettingsDialog { app_id, open: settings_open }
                     }
                 }
                 div { class: "state-explorer-body",
-                    StateExplorer {}
+                    if settings_tab_active() {
+                        if let Some(app_id) = selected_app_id() {
+                            AppSettingsPage { app_id, app_name: selected_app_name() }
+                        }
+                    } else {
+                        StateExplorer {}
+                    }
                 }
             }
         }

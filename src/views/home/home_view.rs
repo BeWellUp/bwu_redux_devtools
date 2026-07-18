@@ -49,9 +49,6 @@ pub(crate) fn HomeView() -> Element {
             // page_content_class: "flex items-center p-4 border-b border-base-300",
             page_content: rsx! {
                 PageContent {}
-                footer { class: "page-footer",
-                    ThemeSelect {}
-                }
             },
             DrawerMenu {
                 MenuItemTrigger {
@@ -118,32 +115,6 @@ pub(crate) fn HomeView() -> Element {
 fn PageContent() -> Element {
     rsx! {
         div { class: "page-content", Outlet::<Route> {} }
-    }
-}
-
-/// DaisyUI theme picker shown in the page footer; the choice is persisted by
-/// `StorageMiddleware`.
-#[component]
-fn ThemeSelect() -> Element {
-    let store = use_context::<Store>();
-    let facade = use_signal(|| HomeViewFacade::new(store.clone()));
-
-    let themes = facade.read().get_themes();
-    let selected_theme = facade.read().get_selected_theme();
-
-    rsx! {
-        label { class: "theme-select",
-            "Theme"
-            select {
-                class: "select select-sm",
-                onchange: move |evt| {
-                    facade.read().dispatch(Action::ThemeChange { theme: evt.value() });
-                },
-                for name in themes() {
-                    option { value: "{name}", selected: name == selected_theme(), "{name}" }
-                }
-            }
-        }
     }
 }
 

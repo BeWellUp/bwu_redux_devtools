@@ -374,11 +374,23 @@
     /* list-col-grow was dropped from this @apply: it is not a real utility
        in daisyUI 5 / Tailwind 4 (it works via :has() on .list-row, which is
        inert here because the row is `block` and this item is `flex`). */
-    @apply flex flex-nowrap p-2;
+    @apply flex flex-nowrap items-center w-full p-2;
   }
 
   .action-name {
-    @apply text-ellipsis grow;
+    @apply text-ellipsis;
+  }
+
+  .action-spacer {
+    @apply grow;
+  }
+
+  .snooze-action-btn {
+    @apply invisible shrink-0 btn btn-ghost btn-xs btn-circle;
+  }
+
+  .action-list-item:hover .snooze-action-btn {
+    @apply visible;
   }
 
   .state-code-block {
@@ -395,6 +407,26 @@
 
   .tab-content {
     @apply border-base-300 bg-base-100 p-6;
+  }
+
+  .app-settings-page {
+    @apply flex flex-col gap-y-6 p-4 overflow-y-auto h-full;
+  }
+
+  .app-settings-section {
+    @apply flex flex-col gap-y-2;
+  }
+
+  .settings-subtitle {
+    @apply text-base font-bold;
+  }
+
+  .paused-actions-list {
+    @apply flex flex-col gap-y-1;
+  }
+
+  .paused-action-row {
+    @apply flex items-center justify-between gap-x-2 px-2 py-1 rounded-box bg-base-200;
   }
 
   /* For some reason this color style is lost for fixed table headers */

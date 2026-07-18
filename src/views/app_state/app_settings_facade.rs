@@ -1,6 +1,11 @@
+use std::collections::BTreeSet;
+
 use bwu_redux_devtools::redux::{
     Action, Store,
-    selectors::{stream_selected_drop_history_on_reconnect, stream_selected_history_limit},
+    selectors::{
+        stream_selected_drop_history_on_reconnect, stream_selected_history_limit,
+        stream_selected_paused_actions, stream_selected_theme, stream_themes,
+    },
 };
 use dioxus::prelude::*;
 use tokio_stream::StreamExt as _;
@@ -46,5 +51,50 @@ impl AppSettingsFacade {
             }
         });
         value
+    }
+
+    pub(crate) fn get_paused_actions(&self) -> Signal<BTreeSet<String>> {
+        let mut value = use_signal(BTreeSet::new);
+        let store = self.store.clone();
+        let _ = use_resource(move || {
+            let store = store.clone();
+            async move {
+                let mut stream = stream_selected_paused_actions(store);
+                while let Some(v) = stream.next().await {
+                    value.set(v);
+                }
+            }
+        });
+        value
+    }
+
+    pub(crate) fn get_themes(&self) -> Signal<Vec<String>> {
+        let mut themes: Signal<Vec<String>> = use_signal(Vec::new);
+        let store = self.store.clone();
+        let _ = use_resource(move || {
+            let store = store.clone();
+            async move {
+                let mut stream = stream_themes(store);
+                while let Some(value) = stream.next().await {
+                    themes.set(value);
+                }
+            }
+        });
+        themes
+    }
+
+    pub(crate) fn get_selected_theme(&self) -> Signal<String> {
+        let mut selected_theme: Signal<String> = use_signal(|| String::from("default"));
+        let store = self.store.clone();
+        let _ = use_resource(move || {
+            let store = store.clone();
+            async move {
+                let mut stream = stream_selected_theme(store);
+                while let Some(value) = stream.next().await {
+                    selected_theme.set(value);
+                }
+            }
+        });
+        selected_theme
     }
 }
