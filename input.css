@@ -343,7 +343,15 @@
   }
 
   .state-explorer {
-    @apply flex flex-col items-start;
+    /* min-width: 0 overrides the flex item default of min-width: auto,
+       which otherwise floors this item's width at its content's intrinsic
+       size and lets it (and .state-explorer-body's 100%-of-parent width)
+       grow without bound to fit wide tab content. That growth pushes the
+       overflow out to .drawer's `overflow: hidden` instead of staying
+       inside .state-explorer-body's own overflow-x: auto, so no
+       horizontal scrollbar ever appeared — the content was silently
+       clipped at the drawer's edge. */
+    @apply flex flex-col items-start min-w-0;
 
     svg {
       width: 16px;
