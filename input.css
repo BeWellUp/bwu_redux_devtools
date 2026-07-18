@@ -103,7 +103,7 @@
     border-width: var(--border);
     border-color: var(--color-base-100);
     box-shadow: var(--shadow-xl);
-    @apply focus-within:outline-solid focus-within:outline-base-content focus-within:outline-1 focus:outline-2;
+    @apply overflow-x-auto focus-within:outline-solid focus-within:outline-base-content focus-within:outline-1 focus:outline-2;
 
     /* & :where(.list-row) { */
     /*   /\* padding: 0; *\/ */
@@ -359,10 +359,29 @@
   .state-explorer-body {
     @apply flex flex-col items-start gap-y-4 overflow-y-scroll w-full;
     height: calc(100dvh - 6em);
+
+    /* daisyUI's menu places the expand/collapse arrow as a grid item right
+       after the summary's content, so its horizontal position drifts with
+       each row's content width. Switching to flex + space-between instead
+       pins the arrow to a fixed column at the row's right edge, with
+       .submenu-title (added around SubMenu's title in menu.rs) as the only
+       other flex item so this doesn't split up the title's own icon/text. */
+    details > summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .submenu-title {
+      @apply inline-flex flex-row items-center gap-x-1;
+      /* breathing room before the arrow column, so it never sits flush
+         against (or reads as part of) the title's own content. */
+      margin-right: 12px;
+    }
   }
 
   .states-list {
-    @apply min-w-xs;
+    @apply min-w-sm;
     height: calc(100dvh - 4em);
   }
 
@@ -374,11 +393,27 @@
     /* list-col-grow was dropped from this @apply: it is not a real utility
        in daisyUI 5 / Tailwind 4 (it works via :has() on .list-row, which is
        inert here because the row is `block` and this item is `flex`). */
-    @apply flex flex-nowrap items-center w-full p-2;
+    /* width: max-content + min-width: 100% lets a long action name overflow
+       past the row's normal width instead of wrapping to a second line;
+       .bwu-list's overflow-x-auto then makes that overflow scrollable
+       instead of clipped. */
+    @apply flex flex-nowrap items-center gap-x-1 p-2;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .action-trigger {
+    @apply flex items-center gap-x-1;
+  }
+
+  .action-counter {
+    /* matches the tree view's menu-xs font size (0.6875rem) */
+    @apply whitespace-nowrap;
+    font-size: 0.6875rem;
   }
 
   .action-name {
-    @apply text-ellipsis;
+    @apply text-sm whitespace-nowrap;
   }
 
   .action-spacer {
@@ -399,6 +434,36 @@
 
   .map-kv-pair {
     @apply flex flex-row gap-x-2;
+  }
+
+  .ron-item {
+    /* the daisyUI menu row provides gap/centering only between its own
+       direct children; this wraps an icon+text pair as one child, so it
+       needs to replicate that layout itself. */
+    @apply inline-flex flex-row items-center gap-x-1;
+    /* breathing room so a right-aligned value never reads as sharing a
+       column with a SubMenu row's expand/collapse arrow. */
+    margin-right: 12px;
+  }
+
+  .ron-added {
+    @apply bg-success/10 text-success rounded-field;
+  }
+
+  .ron-removed {
+    @apply bg-error/10 text-error rounded-field line-through;
+  }
+
+  .ron-changed {
+    @apply bg-warning/10 text-warning rounded-field;
+  }
+
+  .ron-changed-indicator {
+    @apply text-warning text-xs ml-1;
+  }
+
+  .state-diff-toggle {
+    @apply text-sm;
   }
 
   svg.icon {

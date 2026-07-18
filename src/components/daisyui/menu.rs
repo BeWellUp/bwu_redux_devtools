@@ -65,7 +65,9 @@ pub fn SubMenu(props: SubMenuProps) -> Element {
         CollapseStyle::DetailsSummary => rsx! {
             li {
                 details { open: true,
-                    summary { {props.title} }
+                    summary {
+                        span { class: "submenu-title", {props.title} }
+                    }
                     ul { class: "{props.class} {props.menu_size}", {props.children} }
                 }
             }

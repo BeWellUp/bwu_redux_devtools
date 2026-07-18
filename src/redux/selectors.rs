@@ -42,6 +42,28 @@ pub fn select_selected_change(state: &State) -> Option<StateChange> {
     }
 }
 
+/// The entry immediately before the selected one in the same app's history
+/// (mirrors `select_selected_change`'s "no explicit selection = last entry"
+/// fallback). `None` if the selected entry is the first one for this app —
+/// there's nothing to diff against yet.
+pub fn select_selected_previous_change(state: &State) -> Option<StateChange> {
+    let app_state = state
+        .selected_app_id
+        .and_then(|app_id| state.app_states.get(&app_id))?;
+    let selected_state_id = app_state
+        .selected_state_id
+        .or_else(|| app_state.history.iter().last().map(|item| item.counter))?;
+
+    let mut previous = None;
+    for item in app_state.history.iter() {
+        if item.counter == selected_state_id {
+            return previous;
+        }
+        previous = Some(item.to_owned());
+    }
+    None
+}
+
 pub fn select_selected_app_name(state: &State) -> Option<String> {
     state
         .selected_app_id
@@ -112,6 +134,13 @@ pub fn stream_selected_action_json_pretty(store: Store) -> ChangesStream<Option<
 
 pub fn stream_selected_state_ron_value(store: Store) -> ChangesStream<Option<ron::Value>> {
     store.changes_transformed(select_selected_change, |s| {
+        let s = s?;
+        ron::from_str::<ron::Value>(&s.state).ok()
+    })
+}
+
+pub fn stream_selected_previous_state_ron_value(store: Store) -> ChangesStream<Option<ron::Value>> {
+    store.changes_transformed(select_selected_previous_change, |s| {
         let s = s?;
         ron::from_str::<ron::Value>(&s.state).ok()
     })

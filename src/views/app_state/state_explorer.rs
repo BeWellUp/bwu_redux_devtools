@@ -1,4 +1,7 @@
-use bwu_redux_devtools::redux::{StateViewer, Store};
+use bwu_redux_devtools::redux::{
+    StateViewer, Store,
+    ron_diff::{self, DiffNode, DiffStatus},
+};
 use dioxus::prelude::*;
 use dioxus_free_icons::Icon;
 use futures::StreamExt as _;
@@ -9,6 +12,15 @@ use crate::components::{
     icon_tooltip::IconTooltip,
     icons,
 };
+
+fn diff_status_class(status: DiffStatus) -> &'static str {
+    match status {
+        DiffStatus::Unchanged => "",
+        DiffStatus::Added => "ron-added",
+        DiffStatus::Removed => "ron-removed",
+        DiffStatus::Changed => "ron-changed",
+    }
+}
 
 #[component]
 pub(crate) fn StateExplorer() -> Element {
@@ -49,6 +61,21 @@ pub(crate) fn StateExplorer() -> Element {
         while let Some(value) = stream.next().await {
             state_ron_value.set(value);
         }
+    });
+
+    let mut previous_state_ron_value: Signal<Option<ron::Value>> = use_signal(|| None);
+    let _ = use_resource(move || async move {
+        let mut stream = facade.read().get_selected_previous_state_ron_value();
+
+        while let Some(value) = stream.next().await {
+            previous_state_ron_value.set(value);
+        }
+    });
+
+    let mut hide_unchanged: Signal<bool> = use_signal(|| false);
+
+    let state_diff = use_memo(move || {
+        state_ron_value().map(|value| ron_diff::diff(previous_state_ron_value().as_ref(), &value))
     });
 
     let mut action_ron_pretty: Signal<Option<String>> = use_signal(|| None);
@@ -107,6 +134,16 @@ pub(crate) fn StateExplorer() -> Element {
                         }
                     }
 
+                    label { class: "label cursor-pointer justify-start gap-x-2 state-diff-toggle",
+                        input {
+                            r#type: "checkbox",
+                            class: "checkbox checkbox-xs",
+                            checked: hide_unchanged(),
+                            onchange: move |evt| hide_unchanged.set(evt.checked()),
+                        }
+                        "Hide unchanged"
+                    }
+
                     Menu {
                         menu_size: MenuSize::XS,
                         SubMenu {
@@ -116,8 +153,15 @@ pub(crate) fn StateExplorer() -> Element {
                                     Icon { class: "icon", icon: icons::Map {} }
                                 }
                                 "State"
+                                if state_diff().is_some_and(|diff| diff.has_changes()) {
+                                    span { class: "ron-changed-indicator", "●" }
+                                }
                             },
-                            StateValueRon { value: state_value }
+                            StateValueRon {
+                                value: state_value,
+                                diff: state_diff(),
+                                hide_unchanged: hide_unchanged(),
+                            }
                         }
                     }
                 }
@@ -149,8 +193,15 @@ pub(crate) fn StateExplorer() -> Element {
 }
 
 #[component]
-pub(crate) fn StateItemValueRon(value: ron::Value) -> Element {
-    match value {
+pub(crate) fn StateItemValueRon(
+    value: ron::Value,
+    #[props(default)] diff: Option<DiffNode>,
+) -> Element {
+    let diff_class = diff
+        .as_ref()
+        .map(|d| diff_status_class(d.status()))
+        .unwrap_or_default();
+    let content = match value {
         ron::Value::Bool(v) => {
             if v {
                 rsx! {
@@ -189,22 +240,18 @@ pub(crate) fn StateItemValueRon(value: ron::Value) -> Element {
             }
             "{number.into_f64()}"
         },
-        ron::Value::Option(value) => match value {
-            Some(value) => {
-                rsx! {
-                    IconTooltip { text: "Optional value (Some)",
-                        Icon { class: "icon", icon: icons::Option {} }
-                    }
-                    StateItemValueRon { value: value.as_ref().clone() }
+        ron::Value::Option(inner) => match inner {
+            Some(inner_value) => rsx! {
+                IconTooltip { text: "Optional value (Some)",
+                    Icon { class: "icon", icon: icons::Option {} }
                 }
-            }
-            None => {
-                rsx! {
-                    IconTooltip { text: "No value (None)",
-                        Icon { class: "icon", icon: icons::OptionNone {} }
-                    }
+                StateItemValueRon { value: inner_value.as_ref().clone(), diff: diff.clone() }
+            },
+            None => rsx! {
+                IconTooltip { text: "No value (None)",
+                    Icon { class: "icon", icon: icons::OptionNone {} }
                 }
-            }
+            },
         },
         ron::Value::String(s) => rsx! {
             IconTooltip { text: "String",
@@ -234,11 +281,22 @@ pub(crate) fn StateItemValueRon(value: ron::Value) -> Element {
                 Icon { class: "icon", icon: icons::Unit {} }
             }
         },
+    };
+    rsx! {
+        span { class: "ron-item {diff_class}", {content} }
     }
 }
 
 #[component]
-pub(crate) fn StateValueRon(value: ron::Value) -> Element {
+pub(crate) fn StateValueRon(
+    value: ron::Value,
+    #[props(default)] diff: Option<DiffNode>,
+    #[props(default)] hide_unchanged: bool,
+) -> Element {
+    if hide_unchanged && diff.as_ref().is_some_and(|d| !d.has_changes()) {
+        return rsx! {};
+    }
+
     match value {
         ron::Value::Bool(_)
         | ron::Value::Char(_)
@@ -247,17 +305,21 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
         | ron::Value::Bytes(_)
         | ron::Value::Unit => rsx! {
             MenuItem {
-                StateItemValueRon { value: value.clone() }
+                StateItemValueRon { value: value.clone(), diff }
             }
         },
         ron::Value::Option(_) => {
             if can_render_directly(&value) {
                 rsx! {
                     MenuItem {
-                        StateItemValueRon { value: value.clone() }
+                        StateItemValueRon { value: value.clone(), diff }
                     }
                 }
             } else {
+                let ron::Value::Option(inner_opt) = value.clone() else {
+                    unreachable!("matched as Option variant above")
+                };
+                let inner_value = inner_opt.map_or(ron::Value::Unit, |boxed| *boxed);
                 rsx! {
                     SubMenu {
                         collapse_style: CollapseStyle::DetailsSummary,
@@ -265,18 +327,38 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
                             IconTooltip { text: "Optional value (Some)",
                                 Icon { class: "icon", icon: icons::Option {} }
                             }
+                            if diff.as_ref().is_some_and(DiffNode::has_changes) {
+                                span { class: "ron-changed-indicator", "\u{25cf}" }
+                            }
                         },
-                        StateValueRon { value: value.clone() }
+                        StateValueRon { value: inner_value, diff: diff.clone(), hide_unchanged }
                     }
                 }
             }
         }
         ron::Value::Map(map) => {
-            let items = map.iter().map(|(key, value)| {
+            let removed_keys: Vec<ron::Value> = match &diff {
+                Some(DiffNode::Map(_, diff_entries)) => diff_entries
+                    .iter()
+                    .filter(|(key, child)| {
+                        child.status() == DiffStatus::Removed && map.get(key).is_none()
+                    })
+                    .map(|(key, _)| key.clone())
+                    .collect(),
+                _ => Vec::new(),
+            };
+
+            let items = map.iter().filter_map(|(key, value)| {
+                let child_diff = diff.as_ref().and_then(|d| d.map_child(key)).cloned();
+                if hide_unchanged && child_diff.as_ref().is_some_and(|d| !d.has_changes()) {
+                    return None;
+                }
+
                 let key_direct = can_render_directly(key);
                 let value_direct = can_render_directly(value);
+                let has_child_changes = child_diff.as_ref().is_some_and(DiffNode::has_changes);
 
-                if key_direct && value_direct {
+                Some(if key_direct && value_direct {
                     rsx! {
                         MenuItem {
                             IconTooltip { text: "Map key",
@@ -285,7 +367,7 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
                             span { class: "map-kv-pair",
                                 StateItemValueRon { value: key.clone() }
                                 ":"
-                                StateItemValueRon { value: value.clone() }
+                                StateItemValueRon { value: value.clone(), diff: child_diff.clone() }
                             }
                         }
                     }
@@ -301,8 +383,11 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
                                     span { class: "map-kv-pair",
                                         StateItemValueRon { value: key.clone() }
                                     }
+                                    if has_child_changes {
+                                        span { class: "ron-changed-indicator", "\u{25cf}" }
+                                    }
                                 },
-                                StateValueRon { value: value.clone() }
+                                StateValueRon { value: value.clone(), diff: child_diff.clone(), hide_unchanged }
                             }
                         } else {
                             SubMenu {
@@ -311,24 +396,38 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
                                     IconTooltip { text: "Map key",
                                         Icon { class: "icon", icon: icons::MapKey {} }
                                     }
-                                    IconTooltip { text: "Map value",
-                                        Icon { class: "icon", icon: icons::MapValue {} }
-                                    }
                                 },
-                                StateValueRon { value: value.clone() }
+                                StateValueRon { value: key.clone() }
                             }
 
                             SubMenu {
                                 collapse_style: CollapseStyle::DetailsSummary,
                                 title: rsx! {
-                                    IconTooltip { text: "Map key",
-                                        Icon { class: "icon", icon: icons::MapKey {} }
-                                    }
                                     IconTooltip { text: "Map value",
                                         Icon { class: "icon", icon: icons::MapValue {} }
                                     }
+                                    if has_child_changes {
+                                        span { class: "ron-changed-indicator", "\u{25cf}" }
+                                    }
                                 },
-                                StateValueRon { value: value.clone() }
+                                StateValueRon { value: value.clone(), diff: child_diff.clone(), hide_unchanged }
+                            }
+                        }
+                    }
+                })
+            });
+
+            let removed_items = removed_keys.into_iter().map(|key| {
+                rsx! {
+                    MenuItem {
+                        span { class: "ron-item ron-removed",
+                            IconTooltip { text: "Present in the previous state, removed by this action",
+                                Icon { class: "icon", icon: icons::Removed {} }
+                            }
+                            span { class: "map-kv-pair",
+                                StateItemValueRon { value: key.clone() }
+                                ":"
+                                "(removed)"
                             }
                         }
                     }
@@ -339,10 +438,20 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
                 for item in items {
                     {item}
                 }
+                for item in removed_items {
+                    {item}
+                }
             }
         }
 
         ron::Value::Seq(values) => {
+            let removed_count = match &diff {
+                Some(DiffNode::Seq(_, diff_items)) if diff_items.len() > values.len() => {
+                    diff_items.len() - values.len()
+                }
+                _ => 0,
+            };
+
             rsx! {
                 SubMenu {
                     collapse_style: CollapseStyle::DetailsSummary,
@@ -350,9 +459,26 @@ pub(crate) fn StateValueRon(value: ron::Value) -> Element {
                         IconTooltip { text: "List or sequence",
                             Icon { class: "icon", icon: icons::Seq {} }
                         }
+                        if diff.as_ref().is_some_and(DiffNode::has_changes) {
+                            span { class: "ron-changed-indicator", "\u{25cf}" }
+                        }
                     },
-                    for value in values {
-                        StateValueRon { value: value.clone() }
+                    for (index , item) in values.into_iter().enumerate() {
+                        StateValueRon {
+                            value: item,
+                            diff: diff.as_ref().and_then(|d| d.seq_child(index)).cloned(),
+                            hide_unchanged,
+                        }
+                    }
+                    for _ in 0..removed_count {
+                        MenuItem {
+                            span { class: "ron-item ron-removed",
+                                IconTooltip { text: "Present in the previous state, removed by this action",
+                                    Icon { class: "icon", icon: icons::Removed {} }
+                                }
+                                "(removed)"
+                            }
+                        }
                     }
                 }
             }

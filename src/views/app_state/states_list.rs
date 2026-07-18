@@ -5,7 +5,7 @@ use bwu_redux_devtools::redux::{
 };
 use dioxus::prelude::*;
 use dioxus_free_icons::{Icon, icons::ld_icons::LdFilterX};
-use dioxus_primitives::ContentSide;
+use dioxus_primitives::{ContentAlign, ContentSide};
 use futures::StreamExt as _;
 
 use super::{ActionListItemFacade, StatesListFacade};
@@ -103,13 +103,19 @@ pub(crate) fn ActionListItem(props: ActionListItemProps) -> Element {
                             counter: props.item,
                         });
                 },
-                Tooltip {
-                    TooltipTrigger {
-                        span { class: "action-name", "({state.counter}, {state.session_counter}) {action_name}" }
+                div { class: "action-trigger",
+                    Tooltip {
+                        TooltipTrigger {
+                            span { class: "action-counter", "({state.counter}, {state.session_counter})" }
+                        }
+                        TooltipContent {
+                            side: ContentSide::Bottom,
+                            align: ContentAlign::Start,
+                            class: "nowrap",
+                            "Action counter (global, app run)"
+                        }
                     }
-                    TooltipContent { side: ContentSide::Right, class: "nowrap",
-                        "Action counter (global, app run)"
-                    }
+                    span { class: "action-name", "{action_name}" }
                 }
                 span { class: "action-spacer" }
                 Tooltip {
@@ -133,7 +139,12 @@ pub(crate) fn ActionListItem(props: ActionListItemProps) -> Element {
                             Icon { icon: LdFilterX }
                         }
                     }
-                    TooltipContent { side: ContentSide::Right, class: "nowrap", "Pause this action" }
+                    TooltipContent {
+                        side: ContentSide::Bottom,
+                        align: ContentAlign::End,
+                        class: "nowrap",
+                        "Pause this action"
+                    }
                 }
             }
         }

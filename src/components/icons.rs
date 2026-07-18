@@ -1,6 +1,6 @@
 use dioxus_free_icons::icons::ld_icons::{
-    LdBraces, LdBrackets, LdCircleDot, LdCircleSlash, LdDot, LdHash, LdOption, LdParentheses,
-    LdQuote, LdSquare, LdSquareCheckBig, LdType,
+    LdBraces, LdBrackets, LdCircleDot, LdCircleMinus, LdCircleSlash, LdDot, LdHash, LdOption,
+    LdParentheses, LdQuote, LdSquare, LdSquareCheckBig, LdType,
 };
 
 // pub(crate) type Bool = LdToggleLeft;
@@ -19,3 +19,6 @@ pub(crate) type String = LdQuote;
 pub(crate) type Seq = LdBrackets;
 // pub(crate) type SeqEmpty = LdBrackets;
 pub(crate) type Unit = LdParentheses;
+/// A map key or seq item present in the previous state but absent from the
+/// current one (Tree-view diff "removed" ghost rows).
+pub(crate) type Removed = LdCircleMinus;
