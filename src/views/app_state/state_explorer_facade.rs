@@ -3,8 +3,9 @@ use bwu_redux_devtools::redux::{
     selectors::{
         stream_selected_action_json_pretty, stream_selected_action_prefix,
         stream_selected_action_ron_pretty, stream_selected_action_ron_value,
-        stream_selected_state_json_pretty, stream_selected_state_ron_pretty,
-        stream_selected_state_ron_value, stream_selected_state_viewer,
+        stream_selected_previous_state_ron_value, stream_selected_state_json_pretty,
+        stream_selected_state_ron_pretty, stream_selected_state_ron_value,
+        stream_selected_state_viewer,
     },
 };
 
@@ -39,6 +40,12 @@ impl StateExplorerFacade {
 
     pub(crate) fn get_selected_state_ron_value(&self) -> ChangesStream<Option<ron::Value>> {
         stream_selected_state_ron_value(self.store.clone())
+    }
+
+    pub(crate) fn get_selected_previous_state_ron_value(
+        &self,
+    ) -> ChangesStream<Option<ron::Value>> {
+        stream_selected_previous_state_ron_value(self.store.clone())
     }
 
     pub(crate) fn get_selected_state_ron_pretty(&self) -> ChangesStream<Option<String>> {
