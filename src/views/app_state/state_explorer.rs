@@ -253,48 +253,54 @@ fn ExplorerViewer(content: ExplorerContent, on_hide_unchanged_change: Callback<b
                     ron_diff::diff(content.previous_state_ron_value.as_ref(), &state_value);
 
                 rsx! {
-                    Menu {
-                        menu_size: MenuSize::XS,
-                        MenuItem { is_title: true, "Action" }
-                        SubMenu {
-                            collapse_style: CollapseStyle::DetailsSummary,
-                            title: rsx! {
-                                IconTooltip { text: "Map or struct",
-                                    Icon { class: "icon", icon: icons::Map {} }
+                    div { class: "tree-view-panes",
+                        div { class: "tree-view-action-pane",
+                            Menu {
+                                menu_size: MenuSize::XS,
+                                MenuItem { is_title: true, "Action" }
+                                SubMenu {
+                                    collapse_style: CollapseStyle::DetailsSummary,
+                                    title: rsx! {
+                                        IconTooltip { text: "Map or struct",
+                                            Icon { class: "icon", icon: icons::Map {} }
+                                        }
+                                        "{content.action_name.clone().unwrap_or_default()}"
+                                    },
+                                    StateValueRon { value: action_value }
                                 }
-                                "{content.action_name.clone().unwrap_or_default()}"
-                            },
-                            StateValueRon { value: action_value }
+                            }
                         }
-                    }
 
-                    label { class: "label cursor-pointer justify-start gap-x-2 state-diff-toggle",
-                        input {
-                            r#type: "checkbox",
-                            class: "checkbox checkbox-xs",
-                            checked: content.hide_unchanged,
-                            onchange: move |evt| on_hide_unchanged_change.call(evt.checked()),
+                        label { class: "label cursor-pointer justify-start gap-x-2 state-diff-toggle",
+                            input {
+                                r#type: "checkbox",
+                                class: "checkbox checkbox-xs",
+                                checked: content.hide_unchanged,
+                                onchange: move |evt| on_hide_unchanged_change.call(evt.checked()),
+                            }
+                            "Hide unchanged"
                         }
-                        "Hide unchanged"
-                    }
 
-                    Menu {
-                        menu_size: MenuSize::XS,
-                        SubMenu {
-                            collapse_style: CollapseStyle::DetailsSummary,
-                            title: rsx! {
-                                IconTooltip { text: "Map or struct",
-                                    Icon { class: "icon", icon: icons::Map {} }
+                        div { class: "tree-view-state-pane",
+                            Menu {
+                                menu_size: MenuSize::XS,
+                                SubMenu {
+                                    collapse_style: CollapseStyle::DetailsSummary,
+                                    title: rsx! {
+                                        IconTooltip { text: "Map or struct",
+                                            Icon { class: "icon", icon: icons::Map {} }
+                                        }
+                                        "State"
+                                        if state_diff.has_changes() {
+                                            span { class: "ron-changed-indicator", "●" }
+                                        }
+                                    },
+                                    StateValueRon {
+                                        value: state_value,
+                                        diff: Some(state_diff),
+                                        hide_unchanged: content.hide_unchanged,
+                                    }
                                 }
-                                "State"
-                                if state_diff.has_changes() {
-                                    span { class: "ron-changed-indicator", "●" }
-                                }
-                            },
-                            StateValueRon {
-                                value: state_value,
-                                diff: Some(state_diff),
-                                hide_unchanged: content.hide_unchanged,
                             }
                         }
                     }

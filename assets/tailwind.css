@@ -2810,7 +2810,6 @@
     width: 100%;
     flex-direction: column;
     align-items: flex-start;
-    row-gap: calc(var(--spacing) * 4);
     overflow-y: scroll;
     height: calc(100dvh - 6em);
     details > summary {
@@ -3069,6 +3068,30 @@
   .state-diff-toggle {
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
+  }
+  .tree-view-panes {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    row-gap: calc(var(--spacing) * 2);
+    height: calc(100dvh - 6em);
+  }
+  .tree-view-action-pane, .tree-view-state-pane {
+    border-radius: var(--radius-box);
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+    border-color: var(--color-base-300);
+    width: fit-content;
+    max-width: 100%;
+    overflow: auto;
+  }
+  .tree-view-action-pane {
+    max-height: 50%;
+    flex-shrink: 0;
+  }
+  .tree-view-state-pane {
+    flex: 1 1 auto;
+    min-height: 0;
   }
   .render-spinner-anchor {
     width: 100%;
