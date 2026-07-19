@@ -365,7 +365,15 @@
   }
 
   .state-explorer-body {
-    @apply flex flex-col items-start gap-y-4 overflow-y-scroll w-full;
+    /* No gap-y here: .state-explorer-body's only direct children are
+       .render-spinner-anchor (zero net footprint by design — see its own
+       comment) and .state-explorer-render-area, so a gap between them
+       added dead space nothing needs, pushing the total past this
+       element's own height and forcing an outer scrollbar even when
+       .tree-view-panes below is already sized to fit exactly. Any spacing
+       between actual visible content lives further down (e.g.
+       .tree-view-panes' own gap-y-2 between Action/checkbox/State). */
+    @apply flex flex-col items-start overflow-y-scroll w-full;
     height: calc(100dvh - 6em);
 
     /* daisyUI's menu places the expand/collapse arrow as a grid item right
@@ -515,6 +523,43 @@
        content's natural width (like its children used to as direct flex
        items of .state-explorer-body) so wide content still overflows into
        that ancestor's horizontal scrollbar instead of being clipped. */
+  }
+
+  .tree-view-panes {
+    @apply flex flex-col w-full gap-y-2;
+    /* Matches .state-explorer-body's own height (same tab-bar chrome sits
+       above both). Giving this a definite height lets the Action/State
+       panes below split it by percentage and scroll internally instead of
+       sharing .state-explorer-body's single scrollbar for the whole
+       Action+checkbox+State stack — previously a huge Action (e.g.
+       Projects-ModelLoaded-Model) could push State far out of view. */
+    height: calc(100dvh - 6em);
+  }
+
+  .tree-view-action-pane,
+  .tree-view-state-pane {
+    @apply rounded-box border border-base-300;
+    /* Hug the pane's own content width instead of stretching to match the
+       other pane (.tree-view-panes' default align-items: stretch) — but
+       still cap at the available width so wide content scrolls via
+       `overflow: auto` below instead of pushing this pane past the
+       viewport. */
+    width: fit-content;
+    max-width: 100%;
+    overflow: auto;
+  }
+
+  .tree-view-action-pane {
+    max-height: 50%;
+    flex-shrink: 0;
+  }
+
+  .tree-view-state-pane {
+    flex: 1 1 auto;
+    /* Flex items default to min-height: auto (floored at content size),
+       which would let this grow past the remaining space instead of
+       scrolling internally once .tree-view-action-pane takes its share. */
+    min-height: 0;
   }
 
   /* Sticky within .state-explorer-body (the scrolling viewport), sized to
