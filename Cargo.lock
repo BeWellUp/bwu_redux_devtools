@@ -413,6 +413,7 @@ dependencies = [
  "futures",
  "futures-timer",
  "getrandom 0.4.3",
+ "gloo-render",
  "gloo-storage",
  "http",
  "pretty_assertions",
@@ -2520,6 +2521,16 @@ dependencies = [
  "thiserror 1.0.69",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "gloo-render"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f609333b9e38e43e74224410d6616e3ad773ed6fe14f53cd8a006d1bb25e108"
+dependencies = [
+ "wasm-bindgen",
  "web-sys",
 ]
 
