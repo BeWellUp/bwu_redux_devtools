@@ -168,6 +168,29 @@ fn listen_addr() -> SocketAddr {
     }
 }
 
+/// `addr` formatted for humans to paste into a browser or MCP client
+/// config: loopback addresses (the common case — see `listen_addr`'s
+/// default) read as `localhost:{port}` rather than a bracketed IPv6
+/// literal like `[::1]:49051`.
+#[cfg(feature = "mcp")]
+fn display_host(addr: SocketAddr) -> String {
+    if addr.ip().is_loopback() {
+        format!("localhost:{}", addr.port())
+    } else {
+        addr.to_string()
+    }
+}
+
+#[cfg(feature = "mcp")]
+fn log_mcp_status(addr: SocketAddr) {
+    info!("MCP interface enabled at http://{}/mcp", display_host(addr));
+}
+
+#[cfg(not(feature = "mcp"))]
+fn log_mcp_status(_addr: SocketAddr) {
+    info!("MCP interface disabled (build with the `mcp` feature to enable it)");
+}
+
 impl DevtoolsServer {
     /// With a `dispatch_tx`, received state changes are additionally
     /// dispatched into the local store (embedded desktop GUI usage);
@@ -208,6 +231,7 @@ impl DevtoolsServer {
         let devtools_service: DevToolsService =
             DevToolsService::new(self.dispatch_tx.clone(), Arc::clone(&self.hub));
         info!("DevtoolsServer listening on {addr}");
+        log_mcp_status(addr);
         if let Err(error) = Self::serve(addr, devtools_service, Arc::clone(&self.hub)).await {
             if let Some(ref dispatch_tx) = self.dispatch_tx {
                 let _ = dispatch_tx.send(Action::StateUpdateFailure {
