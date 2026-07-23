@@ -14,8 +14,10 @@ use crate::redux::selectors::extract_action_prefix;
 
 /// Capacity of the live broadcast channel to `Watch` subscribers.
 const BROADCAST_CAPACITY: usize = 256;
-/// Per-app replay buffer size; matches the GUI's `MAX_HISTORY_ENTRIES`.
-const MAX_BUFFERED_CHANGES: usize = 200;
+/// Per-app replay buffer size. This only needs to cover the gap while a
+/// `Watch` subscriber is briefly disconnected/reconnecting, not the GUI's
+/// own (much deeper) scrub-back history, so it's kept intentionally small.
+const MAX_BUFFERED_CHANGES: usize = 20;
 
 #[derive(Debug)]
 pub(crate) struct WatchHub {
