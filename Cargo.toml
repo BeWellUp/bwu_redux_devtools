@@ -1,6 +1,6 @@
 [package]
 name = "bwu_redux_devtools"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["Guenter Zoechbauer <guenter@zoechbauer.net>"]
 edition = "2024"
 rust-version = "1.88"
